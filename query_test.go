@@ -1,9 +1,13 @@
-package query
+package query_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tinytoolkit/query"
+)
 
 func TestInsertInto(t *testing.T) {
-	q, v := InsertInto("users", "name", "email").
+	q, v := query.InsertInto("users", "name", "email").
 		Values("John", "johndoe@gmail.com").
 		Values("Jane", "jane@gmail.com").
 		Build()
@@ -17,7 +21,7 @@ func TestInsertInto(t *testing.T) {
 }
 
 func TestDeleteFrom(t *testing.T) {
-	q, v := DeleteFrom("users").
+	q, v := query.DeleteFrom("users").
 		Where("id = ?", 1).
 		Build()
 	expected := "DELETE FROM users WHERE id = $1"
@@ -30,7 +34,7 @@ func TestDeleteFrom(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	q, v := Update("users").
+	q, v := query.Update("users").
 		Set(map[string]any{
 			"name":  "John",
 			"email": "john.doe@example.com",
@@ -47,7 +51,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestSelect(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
 		Build()
@@ -61,7 +65,7 @@ func TestSelect(t *testing.T) {
 }
 
 func TestSelectAll(t *testing.T) {
-	q, v := Select("*").
+	q, v := query.Select("*").
 		From("users").
 		Where("id = ?", 1).
 		And().
@@ -79,7 +83,7 @@ func TestSelectAll(t *testing.T) {
 }
 
 func TestSelectDistinct(t *testing.T) {
-	q, v := Select("DISTINCT name").
+	q, v := query.Select("DISTINCT name").
 		From("users").
 		Where("id = ?", 1).
 		Build()
@@ -93,7 +97,7 @@ func TestSelectDistinct(t *testing.T) {
 }
 
 func TestSelectCount(t *testing.T) {
-	q, v := Select("COUNT(*)").
+	q, v := query.Select("COUNT(*)").
 		From("users").
 		Where("id = ?", 1).
 		Build()
@@ -107,7 +111,7 @@ func TestSelectCount(t *testing.T) {
 }
 
 func TestAndOrIn(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
 		And().
@@ -127,7 +131,7 @@ func TestAndOrIn(t *testing.T) {
 }
 
 func TestIn(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		In("id", []int{1, 2, 3}).
 		And().
@@ -143,7 +147,7 @@ func TestIn(t *testing.T) {
 }
 
 func TestOrderBy(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
 		OrderBy("name ASC", "email DESC", "age NULLS FIRST", "created_at NULLS LAST").
@@ -158,7 +162,7 @@ func TestOrderBy(t *testing.T) {
 }
 
 func TestOffsetAndLimit(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
 		Offset(10).
@@ -174,7 +178,7 @@ func TestOffsetAndLimit(t *testing.T) {
 }
 
 func TestPaginate(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
 		Paginate(2, 5).
@@ -190,7 +194,7 @@ func TestPaginate(t *testing.T) {
 }
 
 func TestPaginateDefaults(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
 		Paginate(0, 0).
@@ -205,7 +209,7 @@ func TestPaginateDefaults(t *testing.T) {
 }
 
 func TestReturning(t *testing.T) {
-	q, v := InsertInto("users", "name", "email").
+	q, v := query.InsertInto("users", "name", "email").
 		Values("John", "johndoe@gmail.com").
 		Returning("id", "name").
 		Build()
@@ -219,7 +223,7 @@ func TestReturning(t *testing.T) {
 }
 
 func TestGroupBy(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
 		GroupBy("name", "email").
@@ -234,7 +238,7 @@ func TestGroupBy(t *testing.T) {
 }
 
 func TestHaving(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
 		GroupBy("name", "email").
@@ -250,7 +254,7 @@ func TestHaving(t *testing.T) {
 }
 
 func TestJoin(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Join("posts", "users.id = posts.user_id").
 		Where("users.id = ?", 1).
@@ -265,7 +269,7 @@ func TestJoin(t *testing.T) {
 }
 
 func TestLeftJoin(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		LeftJoin("posts", "users.id = posts.user_id").
 		Where("users.id = ?", 1).
@@ -280,7 +284,7 @@ func TestLeftJoin(t *testing.T) {
 }
 
 func TestRightJoin(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		RightJoin("posts", "users.id = posts.user_id").
 		Where("users.id = ?", 1).
@@ -295,7 +299,7 @@ func TestRightJoin(t *testing.T) {
 }
 
 func TestFullJoin(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		FullJoin("posts", "users.id = posts.user_id").
 		Where("users.id = ?", 1).
@@ -310,10 +314,10 @@ func TestFullJoin(t *testing.T) {
 }
 
 func TestUnion(t *testing.T) {
-	q, v := Select("name", "email").
+	q, v := query.Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
-		Union(Select("name", "email").
+		Union(query.Select("name", "email").
 			From("users").
 			Where("id = ?", 1)).
 		Build()
@@ -327,7 +331,7 @@ func TestUnion(t *testing.T) {
 }
 
 func TestWith(t *testing.T) {
-	q, v := With("users", Select("name", "email").From("users")).
+	q, v := query.With("users", query.Select("name", "email").From("users")).
 		Select("name", "email").
 		From("users").
 		Where("id = ?", 1).
@@ -342,7 +346,7 @@ func TestWith(t *testing.T) {
 }
 
 func TestRaw(t *testing.T) {
-	q, v := Select("name").
+	q, v := query.Select("name").
 		From("users").
 		Where("id = ?", 1).
 		Raw(" AND name = ?", "John").
@@ -358,7 +362,7 @@ func TestRaw(t *testing.T) {
 
 func BenchmarkInsertInto(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = InsertInto("users", "name", "email").
+		_, _ = query.InsertInto("users", "name", "email").
 			Values("John", "johndoe@gmail.com").
 			Values("Jane", "jane@gmail.com").
 			Build()
@@ -367,7 +371,7 @@ func BenchmarkInsertInto(b *testing.B) {
 
 func BenchmarkDeleteFrom(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = DeleteFrom("users").
+		_, _ = query.DeleteFrom("users").
 			Where("id = ?", 1).
 			Build()
 	}
@@ -375,7 +379,7 @@ func BenchmarkDeleteFrom(b *testing.B) {
 
 func BenchmarkUpdate(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = Update("users").
+		_, _ = query.Update("users").
 			Set(map[string]any{
 				"name":  "John",
 				"email": "john.doe@example.com",
@@ -387,7 +391,7 @@ func BenchmarkUpdate(b *testing.B) {
 
 func BenchmarkSelect(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = Select("name", "email").
+		_, _ = query.Select("name", "email").
 			From("users").
 			Where("id = ?", 1).
 			Build()
@@ -396,7 +400,7 @@ func BenchmarkSelect(b *testing.B) {
 
 func BenchmarkComplex(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = Select("name", "email").
+		_, _ = query.Select("name", "email").
 			From("users").
 			Where("id = ?", 1).
 			Where("name = ?", "John").
