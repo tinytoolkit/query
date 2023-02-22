@@ -8,6 +8,55 @@ A simple PostgreSQL query builder library for Go.
 go get github.com/tinytoolkit/query
 ```
 
+## Supported Queries
+
+- `InsertInto(table string, fields ...string)` 
+- `Values(values ...any)`
+- `DeleteFrom(table string)`
+- `Update(table string)`
+- `Set(fields map[string]any)`
+- `Select(exprs ...string)`
+- `From(table string)`
+- `Where(expr string, value any)`
+- `And()`
+- `Or()`
+- `In(column string, values any)`
+- `Join(table string, onConditions string)`
+- `LeftJoin(table string, onConditions string)`
+- `RightJoin(table string, onConditions string)`
+- `FullJoin(table string, onConditions string)`
+- `OrderBy(expr ...string)`
+- `GroupBy(exprs ...string)`
+- `Having(expr string, value any)`
+- `Limit(limit int)`
+- `Offset(offset int)`
+- `Paginate(page int, pageSize int)`
+- `Returning(columns ...string)`
+- `Union(other *Query)`
+- `With(name string, query *Query)`
+- `Begin()`
+- `Commit()`
+- `CreateSchema(name string, owner string)`
+- `AlterSchemaName(oldName string, newName string)`
+- `AlterSchemaOwner(name string, owner string)`
+- `DropSchema(name string, cascade bool)`
+- `CreateTable(table string, columns ...string)`
+- `CommentOnTable(table string, comment string)`
+- `AlterTableName(oldName string, newName string)`
+- `AlterRowSecurity(table string, enable bool)`
+- `AlterForceRowSecurity(table string, force bool)`
+- `DropTable(table string, cascade bool)`
+- `CommentOnColumn(table string, column string, comment string)`
+- `AddColumn(table string, column string, dataType string)`
+- `AlterColumnName(table string, oldName string, newName string)`
+- `AlterColumnType(table string, column string, dataType string)`
+- `AlterColumnSetDefault(table string, column string, defaultValue string)`
+- `AlterColumnDropDefault(table string, column string)`\
+- `AlterColumnNull(table string, column string, nullable bool)`
+- `AlterColumnUsing(table string, column string, dataType string)`
+- `DropColumn(table string, column string)`
+- `Raw(query string, args ...any)`
+
 ### Usage
 
 ```go

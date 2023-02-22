@@ -7,15 +7,15 @@ import (
 )
 
 func TestCreateSchema(t *testing.T) {
-	q := query.Begin().CreateSchema("test", "").Commit().String()
-	expected := "BEGIN; CREATE SCHEMA test; COMMIT;"
+	q := query.Begin().CreateSchema("test", "postgres").Commit().String()
+	expected := "BEGIN; CREATE SCHEMA test AUTHORIZATION postgres; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 }
 
-func TestRenameSchema(t *testing.T) {
-	q := query.Begin().RenameSchema("test", "test2").Commit().String()
+func TestAlterSchemaName(t *testing.T) {
+	q := query.Begin().AlterSchemaName("test", "test2").Commit().String()
 	expected := "BEGIN; ALTER SCHEMA test RENAME TO test2; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
@@ -53,7 +53,7 @@ func TestCreateSchemaWithOwner(t *testing.T) {
 }
 
 func TestCreateTable(t *testing.T) {
-	q := query.Begin().CreateTable("users").Commit().String()
+	q := query.Begin().CreateTable("users", nil).Commit().String()
 	expected := "BEGIN; CREATE TABLE users (); COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
@@ -62,7 +62,11 @@ func TestCreateTable(t *testing.T) {
 
 func TestCreateTableWithColumns(t *testing.T) {
 	q := query.Begin().
-		CreateTable("users", "id serial PRIMARY KEY", "name varchar(255)", "email varchar(255)").
+		CreateTable("users", map[string]string{
+			"id":    "serial PRIMARY KEY",
+			"name":  "varchar(255)",
+			"email": "varchar(255)",
+		}).
 		Commit().
 		String()
 	expected := "BEGIN; CREATE TABLE users (id serial PRIMARY KEY, name varchar(255), email varchar(255)); COMMIT;"
@@ -82,8 +86,8 @@ func TestCommentOnTable(t *testing.T) {
 	}
 }
 
-func TestRenameTable(t *testing.T) {
-	q := query.Begin().RenameTable("users", "users2").Commit().String()
+func TestAlterTableName(t *testing.T) {
+	q := query.Begin().AlterTableName("users", "users2").Commit().String()
 	expected := "BEGIN; ALTER TABLE users RENAME TO users2; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
@@ -109,16 +113,16 @@ func TestAddColumn(t *testing.T) {
 	}
 }
 
-func TestRenameColumn(t *testing.T) {
-	q := query.Begin().RenameColumn("users", "name", "fullname").Commit().String()
+func TestAlterColumnName(t *testing.T) {
+	q := query.Begin().AlterColumnName("users", "name", "fullname").Commit().String()
 	expected := "BEGIN; ALTER TABLE users RENAME COLUMN name TO fullname; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 }
 
-func TestAlterColumnDataType(t *testing.T) {
-	q := query.Begin().AlterColumnDataType("users", "name", "varchar(255)").Commit().String()
+func TestAlterColumnType(t *testing.T) {
+	q := query.Begin().AlterColumnType("users", "name", "varchar(255)").Commit().String()
 	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name TYPE varchar(255); COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
@@ -141,6 +145,22 @@ func TestAlterColumnDropDefault(t *testing.T) {
 	}
 }
 
+func TestAlterColumnNull(t *testing.T) {
+	q := query.Begin().AlterColumnNull("users", "name", false).Commit().String()
+	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name SET NOT NULL; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAlterColumnUsing(t *testing.T) {
+	q := query.Begin().AlterColumnUsing("users", "name", "name::varchar(255)").Commit().String()
+	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name USING name::varchar(255); COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
 func TestDropColumn(t *testing.T) {
 	q := query.Begin().DropColumn("users", "name").Commit().String()
 	expected := "BEGIN; ALTER TABLE users DROP COLUMN name; COMMIT;"
@@ -149,28 +169,28 @@ func TestDropColumn(t *testing.T) {
 	}
 }
 
-func TestSetRowSecurity(t *testing.T) {
-	q := query.Begin().SetRowSecurity("users", true).Commit().String()
+func TestAlterRowSecurity(t *testing.T) {
+	q := query.Begin().AlterRowSecurity("users", true).Commit().String()
 	expected := "BEGIN; ALTER TABLE users ENABLE ROW LEVEL SECURITY; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 
-	q = query.Begin().SetRowSecurity("users", false).Commit().String()
+	q = query.Begin().AlterRowSecurity("users", false).Commit().String()
 	expected = "BEGIN; ALTER TABLE users DISABLE ROW LEVEL SECURITY; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 }
 
-func TestForceRowSecurity(t *testing.T) {
-	q := query.Begin().SetForceRowSecurity("users", true).Commit().String()
+func TestAlterForceRowSecurity(t *testing.T) {
+	q := query.Begin().AlterForceRowSecurity("users", true).Commit().String()
 	expected := "BEGIN; ALTER TABLE users FORCE ROW LEVEL SECURITY; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 
-	q = query.Begin().SetForceRowSecurity("users", false).Commit().String()
+	q = query.Begin().AlterForceRowSecurity("users", false).Commit().String()
 	expected = "BEGIN; ALTER TABLE users NO FORCE ROW LEVEL SECURITY; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
@@ -555,7 +575,14 @@ func BenchmarkCreateTable(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = query.
 			Begin().
-			CreateTable("users", "id serial PRIMARY KEY", "name varchar(255)", "email varchar(255)").
+			CreateTable("users", map[string]string{
+				"id":         "serial PRIMARY KEY",
+				"name":       "varchar(255)",
+				"email":      "varchar(255)",
+				"first_name": "varchar(255)",
+				"last_name":  "varchar(255)",
+				"country":    "varchar(255)",
+			}).
 			Commit().
 			String()
 	}
