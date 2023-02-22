@@ -7,54 +7,78 @@ import (
 )
 
 // Query is a struct representing a query statement
-// query is the slice of bytes representing the query string
-// args is a slice of arguments for the query
 type Query struct {
 	query []byte
 	args  []any
 }
 
+// CreateSchema builds the query string for a CREATE SCHEMA statement
+func CreateSchema(name string, owner string) *Query {
+	q := getQuery()
+	q.query = append(q.query, "CREATE SCHEMA "...)
+	q.query = append(q.query, name...)
+	if owner != "" {
+		q.query = append(q.query, " AUTHORIZATION "...)
+		q.query = append(q.query, owner...)
+	}
+	q.query = append(q.query, ';')
+	return q
+}
+
+// CreateTable is a function to start building a CREATE TABLE query statement
+func CreateTable(table string, columns ...string) *Query {
+	q := getQuery()
+	q.query = append(q.query, "CREATE TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, ' ', '(')
+	for i, c := range columns {
+		if i > 0 {
+			q.query = append(q.query, ',', ' ')
+		}
+		q.query = append(q.query, c...)
+	}
+	q.query = append(q.query, ')', ';')
+	return q
+}
+
+// CommentOnTable builds the query string for a COMMENT ON TABLE statement
+func CommentOnTable(table string, comment string) *Query {
+	q := getQuery()
+	q.query = append(q.query, "COMMENT ON TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " IS "...)
+	q.query = append(q.query, '"')
+	q.query = append(q.query, comment...)
+	q.query = append(q.query, '"', ';')
+	return q
+}
+
 // InsertInto is a function to start building an INSERT INTO query statement
-// table is the name of the table to insert into
-// fields are the names of the fields being inserted
-// returns a Query struct for chaining
 func InsertInto(table string, fields ...string) *Query {
 	return getQuery().InsertInto(table, fields...)
 }
 
 // DeleteFrom is a function to start building a DELETE FROM query statement
-// table is the name of the table to delete from
-// returns a Query struct for chaining
 func DeleteFrom(table string) *Query {
 	return getQuery().DeleteFrom(table)
 }
 
 // Update is a function to start building an UPDATE query statement
-// table is the name of the table to update
-// returns a Query struct for chaining
 func Update(table string) *Query {
 	return getQuery().Update(table)
 }
 
 // Select is a function to start building a SELECT query statement
-// exprs are expressions to be selected
-// returns a Query struct for chaining
 func Select(exprs ...string) *Query {
 	return getQuery().Select(exprs...)
 }
 
 // With is a function to start building a WITH query statement
-// name is the name of the WITH statement
-// query is the query being referred to in the WITH statement
-// returns a Query struct for chaining
 func With(name string, query *Query) *Query {
 	return getQuery().With(name, query)
 }
 
 // InsertInto builds the query string for an INSERT INTO statement
-// table is the name of the table being inserted into
-// fields are the names of the fields being inserted
-// returns the updated Query struct for chaining
 func (q *Query) InsertInto(table string, fields ...string) *Query {
 	q.query = append(q.query, "INSERT INTO "...)
 	q.query = append(q.query, table...)
@@ -70,8 +94,6 @@ func (q *Query) InsertInto(table string, fields ...string) *Query {
 }
 
 // Values builds the query string for the VALUES clause in an INSERT INTO statement
-// values are the values being inserted
-// returns the updated Query struct for chaining
 func (q *Query) Values(values ...any) *Query {
 	if !bytes.Contains(q.query, []byte(" VALUES")) {
 		q.query = append(q.query, " VALUES"...)
@@ -89,8 +111,6 @@ func (q *Query) Values(values ...any) *Query {
 }
 
 // DeleteFrom is a method for the Query struct and builds the query string for a DELETE statement
-// table is the name of the table being deleted from
-// returns the updated Query struct for chaining
 func (q *Query) DeleteFrom(table string) *Query {
 	q.query = append(q.query, "DELETE FROM "...)
 	q.query = append(q.query, table...)
@@ -98,8 +118,6 @@ func (q *Query) DeleteFrom(table string) *Query {
 }
 
 // Update builds the query string for an UPDATE statement
-// table is the name of the table being updated
-// returns the updated Query struct for chaining
 func (q *Query) Update(table string) *Query {
 	q.query = append(q.query, "UPDATE "...)
 	q.query = append(q.query, table...)
@@ -108,8 +126,6 @@ func (q *Query) Update(table string) *Query {
 }
 
 // Set builds the query string for the SET clause in an UPDATE statement
-// fields is a map of field names to values being updated
-// returns the updated Query struct for chaining
 func (q *Query) Set(fields map[string]any) *Query {
 	var i int
 	for field, value := range fields {
@@ -126,8 +142,6 @@ func (q *Query) Set(fields map[string]any) *Query {
 }
 
 // Select builds the query string for the SELECT clause
-// exprs is a list of expressions to be selected
-// returns the updated Query struct for chaining
 func (q *Query) Select(exprs ...string) *Query {
 	q.query = append(q.query, "SELECT "...)
 	for i, expr := range exprs {
@@ -140,8 +154,6 @@ func (q *Query) Select(exprs ...string) *Query {
 }
 
 // From builds the query string for the FROM clause
-// table is the name of the table being selected from
-// returns the updated Query struct for chaining
 func (q *Query) From(table string) *Query {
 	q.query = append(q.query, " FROM "...)
 	q.query = append(q.query, table...)
@@ -149,9 +161,6 @@ func (q *Query) From(table string) *Query {
 }
 
 // Where builds the query string for the WHERE clause
-// expr is the expression to be used in the WHERE clause
-// value is the argument to be used in the WHERE clause
-// returns the updated Query struct for chaining
 func (q *Query) Where(expr string, value any) *Query {
 	if !bytes.Contains(q.query, []byte("WHERE")) {
 		q.query = append(q.query, " WHERE "...)
@@ -162,23 +171,18 @@ func (q *Query) Where(expr string, value any) *Query {
 }
 
 // And builds the query string for the AND clause
-// returns the updated Query struct for chaining
 func (q *Query) And() *Query {
 	q.query = append(q.query, " AND "...)
 	return q
 }
 
 // Or builds the query string for the OR clause
-// returns the updated Query struct for chaining
 func (q *Query) Or() *Query {
 	q.query = append(q.query, " OR "...)
 	return q
 }
 
 // In builds the query string for the IN clause
-// column is the name of the column to be filtered
-// values is a list of values to be used in the IN clause
-// returns the updated Query struct for chaining
 func (q *Query) In(column string, values any) *Query {
 	if !bytes.Contains(q.query, []byte(" WHERE")) {
 		q.query = append(q.query, " WHERE "...)
@@ -216,9 +220,6 @@ func (q *Query) In(column string, values any) *Query {
 }
 
 // Join builds the query string for the JOIN clause
-// table is the name of the table to join with
-// onConditions is the conditions to specify how to join the tables
-// returns the updated Query struct for chaining
 func (q *Query) Join(table string, onConditions string) *Query {
 	q.query = append(q.query, " JOIN "...)
 	q.query = append(q.query, table...)
@@ -228,9 +229,6 @@ func (q *Query) Join(table string, onConditions string) *Query {
 }
 
 // LeftJoin builds the query string for the LEFT JOIN clause
-// table is the name of the table to left join with
-// onConditions is the conditions to specify how to left join the tables
-// returns the updated Query struct for chaining
 func (q *Query) LeftJoin(table string, onConditions string) *Query {
 	q.query = append(q.query, " LEFT JOIN "...)
 	q.query = append(q.query, table...)
@@ -240,9 +238,6 @@ func (q *Query) LeftJoin(table string, onConditions string) *Query {
 }
 
 // RightJoin builds the query string for the RIGHT JOIN clause
-// table is the name of the table to right join with
-// onConditions is the conditions to specify how to right join the tables
-// returns the updated Query struct for chaining
 func (q *Query) RightJoin(table string, onConditions string) *Query {
 	q.query = append(q.query, " RIGHT JOIN "...)
 	q.query = append(q.query, table...)
@@ -252,9 +247,6 @@ func (q *Query) RightJoin(table string, onConditions string) *Query {
 }
 
 // FullJoin builds the query string for the FULL JOIN clause
-// table is the name of the table to full join with
-// onConditions is the conditions to specify how to full join the tables
-// returns the updated Query struct for chaining
 func (q *Query) FullJoin(table string, onConditions string) *Query {
 	q.query = append(q.query, " FULL JOIN "...)
 	q.query = append(q.query, table...)
@@ -264,8 +256,6 @@ func (q *Query) FullJoin(table string, onConditions string) *Query {
 }
 
 // OrderBy builds the query string for the ORDER BY clause
-// exprs is a list of expressions to order by
-// returns the updated Query struct for chaining
 func (q *Query) OrderBy(exprs ...string) *Query {
 	q.query = append(q.query, " ORDER BY "...)
 	for i, expr := range exprs {
@@ -278,8 +268,6 @@ func (q *Query) OrderBy(exprs ...string) *Query {
 }
 
 // GroupBy builds the query string for the GROUP BY clause
-// exprs is a list of expressions to group by
-// returns the updated Query struct for chaining
 func (q *Query) GroupBy(exprs ...string) *Query {
 	q.query = append(q.query, " GROUP BY "...)
 	for i, expr := range exprs {
@@ -292,9 +280,6 @@ func (q *Query) GroupBy(exprs ...string) *Query {
 }
 
 // Having builds the query string for the HAVING clause
-// expr is the expression to filter the grouped results
-// value is the value to use in the HAVING clause
-// returns the updated Query struct for chaining
 func (q *Query) Having(expr string, value any) *Query {
 	q.query = append(q.query, " HAVING "...)
 	q.query = append(q.query, expr...)
@@ -303,8 +288,6 @@ func (q *Query) Having(expr string, value any) *Query {
 }
 
 // Limit builds the query string for the LIMIT clause
-// n is the number of rows to limit the query results to
-// returns the updated Query struct for chaining
 func (q *Query) Limit(n int) *Query {
 	q.query = append(q.query, " LIMIT ?"...)
 	q.args = append(q.args, n)
@@ -312,8 +295,6 @@ func (q *Query) Limit(n int) *Query {
 }
 
 // Offset builds the query string for the OFFSET clause
-// n is the number of rows to offset the query results by
-// returns the updated Query struct for chaining
 func (q *Query) Offset(n int) *Query {
 	q.query = append(q.query, " OFFSET ?"...)
 	q.args = append(q.args, n)
@@ -321,9 +302,6 @@ func (q *Query) Offset(n int) *Query {
 }
 
 // Paginate adds a LIMIT and OFFSET clause to the query string to paginate results
-// page is the number of the page to retrieve
-// pageSize is the number of results per page
-// returns the updated Query struct for chaining
 func (q *Query) Paginate(page int, pageSize int) *Query {
 	if page < 1 {
 		page = 1
@@ -339,8 +317,6 @@ func (q *Query) Paginate(page int, pageSize int) *Query {
 }
 
 // Returning builds the query string for the RETURNING clause
-// fields are the fields to return from the query
-// returns the updated Query struct for chaining
 func (q *Query) Returning(fields ...string) *Query {
 	q.query = append(q.query, " RETURNING "...)
 	for i, f := range fields {
@@ -353,8 +329,6 @@ func (q *Query) Returning(fields ...string) *Query {
 }
 
 // Union builds the query string for the UNION clause
-// other is the Query struct to union with
-// returns the updated Query struct for chaining
 func (q *Query) Union(other *Query) *Query {
 	q.query = append(q.query, " UNION "...)
 	q.query = append(q.query, other.query...)
@@ -363,9 +337,6 @@ func (q *Query) Union(other *Query) *Query {
 }
 
 // With builds the query string for the WITH clause
-// name is the name of the WITH clause
-// query is the Query struct to use in the WITH clause
-// returns the updated Query struct for chaining
 func (q *Query) With(name string, query *Query) *Query {
 	q.query = append(q.query, "WITH "...)
 	q.query = append(q.query, name...)
@@ -377,17 +348,21 @@ func (q *Query) With(name string, query *Query) *Query {
 }
 
 // Raw adds a raw query string to the query
-// query is the raw query string to add
-// args are any arguments to use in the raw query string
-// returns the updated Query struct for chaining
 func (q *Query) Raw(query string, args ...any) *Query {
 	q.query = append(q.query, query...)
 	q.args = append(q.args, args...)
 	return q
 }
 
-// Build returns the built query string and arguments
-// returns the built query string and arguments
+// String returns the built query string and resets the query
+// This is a convenience method for when you don't need the arguments
+func (q *Query) String() string {
+	query := string(q.query)
+	q.Reset()
+	return query
+}
+
+// Build returns the built query string and arguments and resets the query
 func (q *Query) Build() (string, []any) {
 	replacementIndex := 1
 	for i := 0; i < len(q.query); i++ {
@@ -411,7 +386,6 @@ func (q *Query) Build() (string, []any) {
 }
 
 // Reset resets the Query struct for reuse
-// returns the Query struct to the pool for reuse
 func (q *Query) Reset() {
 	q.query = q.query[:0]
 	q.args = q.args[:0]

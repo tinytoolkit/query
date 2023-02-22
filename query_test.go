@@ -6,6 +6,50 @@ import (
 	"github.com/tinytoolkit/query"
 )
 
+func TestCreateSchema(t *testing.T) {
+	q := query.CreateSchema("test", "").String()
+	expected := "CREATE SCHEMA test;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestCreateSchemaWithOwner(t *testing.T) {
+	q := query.CreateSchema("test", "postgres").String()
+	expected := "CREATE SCHEMA test AUTHORIZATION postgres;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestCreateTable(t *testing.T) {
+	q := query.CreateTable("users").String()
+	expected := "CREATE TABLE users ();"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestCreateTableWithColumns(t *testing.T) {
+	q := query.
+		CreateTable("users", "id serial PRIMARY KEY", "name varchar(255)", "email varchar(255)").
+		String()
+	expected := "CREATE TABLE users (id serial PRIMARY KEY, name varchar(255), email varchar(255));"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestCommentOnTable(t *testing.T) {
+	q := query.
+		CommentOnTable("users", "This is a table for users").
+		String()
+	expected := `COMMENT ON TABLE users IS "This is a table for users";`
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
 func TestInsertInto(t *testing.T) {
 	q, v := query.InsertInto("users", "name", "email").
 		Values("John", "johndoe@gmail.com").
@@ -357,6 +401,13 @@ func TestRaw(t *testing.T) {
 	}
 	if len(v) != 2 {
 		t.Errorf("Expected 2 value, got %d", len(v))
+	}
+}
+
+func BenchmarkCreateTable(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, _ = query.CreateTable("users", "id serial PRIMARY KEY", "name varchar(255)", "email varchar(255)").
+			Build()
 	}
 }
 
