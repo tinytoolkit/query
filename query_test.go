@@ -7,44 +7,185 @@ import (
 )
 
 func TestCreateSchema(t *testing.T) {
-	q := query.CreateSchema("test", "").String()
-	expected := "CREATE SCHEMA test;"
+	q := query.Begin().CreateSchema("test", "").Commit().String()
+	expected := "BEGIN; CREATE SCHEMA test; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestRenameSchema(t *testing.T) {
+	q := query.Begin().RenameSchema("test", "test2").Commit().String()
+	expected := "BEGIN; ALTER SCHEMA test RENAME TO test2; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAlterSchemaOwner(t *testing.T) {
+	q := query.Begin().AlterSchemaOwner("test", "postgres").Commit().String()
+	expected := "BEGIN; ALTER SCHEMA test OWNER TO postgres; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestDropSchema(t *testing.T) {
+	q := query.Begin().DropSchema("test", false).Commit().String()
+	expected := "BEGIN; DROP SCHEMA test RESTRICT; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+
+	q = query.Begin().DropSchema("test", true).Commit().String()
+	expected = "BEGIN; DROP SCHEMA test CASCADE; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 }
 
 func TestCreateSchemaWithOwner(t *testing.T) {
-	q := query.CreateSchema("test", "postgres").String()
-	expected := "CREATE SCHEMA test AUTHORIZATION postgres;"
+	q := query.Begin().CreateSchema("test", "postgres").Commit().String()
+	expected := "BEGIN; CREATE SCHEMA test AUTHORIZATION postgres; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 }
 
 func TestCreateTable(t *testing.T) {
-	q := query.CreateTable("users").String()
-	expected := "CREATE TABLE users ();"
+	q := query.Begin().CreateTable("users").Commit().String()
+	expected := "BEGIN; CREATE TABLE users (); COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 }
 
 func TestCreateTableWithColumns(t *testing.T) {
-	q := query.
+	q := query.Begin().
 		CreateTable("users", "id serial PRIMARY KEY", "name varchar(255)", "email varchar(255)").
+		Commit().
 		String()
-	expected := "CREATE TABLE users (id serial PRIMARY KEY, name varchar(255), email varchar(255));"
+	expected := "BEGIN; CREATE TABLE users (id serial PRIMARY KEY, name varchar(255), email varchar(255)); COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
 }
 
 func TestCommentOnTable(t *testing.T) {
-	q := query.
+	q := query.Begin().
 		CommentOnTable("users", "This is a table for users").
+		Commit().
 		String()
-	expected := `COMMENT ON TABLE users IS "This is a table for users";`
+	expected := `BEGIN; COMMENT ON TABLE users IS 'This is a table for users'; COMMIT;`
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestRenameTable(t *testing.T) {
+	q := query.Begin().RenameTable("users", "users2").Commit().String()
+	expected := "BEGIN; ALTER TABLE users RENAME TO users2; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestCommentOnColumn(t *testing.T) {
+	q := query.Begin().
+		CommentOnColumn("users", "name", "This is a column for user name").
+		Commit().
+		String()
+	expected := `BEGIN; COMMENT ON COLUMN users.name IS 'This is a column for user name'; COMMIT;`
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAddColumn(t *testing.T) {
+	q := query.Begin().AddColumn("users", "age", "int").Commit().String()
+	expected := "BEGIN; ALTER TABLE users ADD COLUMN age int; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestRenameColumn(t *testing.T) {
+	q := query.Begin().RenameColumn("users", "name", "fullname").Commit().String()
+	expected := "BEGIN; ALTER TABLE users RENAME COLUMN name TO fullname; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAlterColumnDataType(t *testing.T) {
+	q := query.Begin().AlterColumnDataType("users", "name", "varchar(255)").Commit().String()
+	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name TYPE varchar(255); COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAlterColumnSetDefault(t *testing.T) {
+	q := query.Begin().AlterColumnSetDefault("users", "name", "John Doe").Commit().String()
+	expected := `BEGIN; ALTER TABLE users ALTER COLUMN name SET DEFAULT 'John Doe'; COMMIT;`
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAlterColumnDropDefault(t *testing.T) {
+	q := query.Begin().AlterColumnDropDefault("users", "name").Commit().String()
+	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name DROP DEFAULT; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestDropColumn(t *testing.T) {
+	q := query.Begin().DropColumn("users", "name").Commit().String()
+	expected := "BEGIN; ALTER TABLE users DROP COLUMN name; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestSetRowSecurity(t *testing.T) {
+	q := query.Begin().SetRowSecurity("users", true).Commit().String()
+	expected := "BEGIN; ALTER TABLE users ENABLE ROW LEVEL SECURITY; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+
+	q = query.Begin().SetRowSecurity("users", false).Commit().String()
+	expected = "BEGIN; ALTER TABLE users DISABLE ROW LEVEL SECURITY; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestForceRowSecurity(t *testing.T) {
+	q := query.Begin().SetForceRowSecurity("users", true).Commit().String()
+	expected := "BEGIN; ALTER TABLE users FORCE ROW LEVEL SECURITY; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+
+	q = query.Begin().SetForceRowSecurity("users", false).Commit().String()
+	expected = "BEGIN; ALTER TABLE users NO FORCE ROW LEVEL SECURITY; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestDropTable(t *testing.T) {
+	q := query.Begin().DropTable("users", false).Commit().String()
+	expected := "BEGIN; DROP TABLE users RESTRICT; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+
+	q = query.Begin().DropTable("users", true).Commit().String()
+	expected = "BEGIN; DROP TABLE users CASCADE; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
@@ -404,10 +545,19 @@ func TestRaw(t *testing.T) {
 	}
 }
 
+func BenchmarkCreateSchema(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = query.Begin().CreateSchema("test", "postgres").Commit().String()
+	}
+}
+
 func BenchmarkCreateTable(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = query.CreateTable("users", "id serial PRIMARY KEY", "name varchar(255)", "email varchar(255)").
-			Build()
+		_ = query.
+			Begin().
+			CreateTable("users", "id serial PRIMARY KEY", "name varchar(255)", "email varchar(255)").
+			Commit().
+			String()
 	}
 }
 

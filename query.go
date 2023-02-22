@@ -12,47 +12,6 @@ type Query struct {
 	args  []any
 }
 
-// CreateSchema builds the query string for a CREATE SCHEMA statement
-func CreateSchema(name string, owner string) *Query {
-	q := getQuery()
-	q.query = append(q.query, "CREATE SCHEMA "...)
-	q.query = append(q.query, name...)
-	if owner != "" {
-		q.query = append(q.query, " AUTHORIZATION "...)
-		q.query = append(q.query, owner...)
-	}
-	q.query = append(q.query, ';')
-	return q
-}
-
-// CreateTable is a function to start building a CREATE TABLE query statement
-func CreateTable(table string, columns ...string) *Query {
-	q := getQuery()
-	q.query = append(q.query, "CREATE TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, ' ', '(')
-	for i, c := range columns {
-		if i > 0 {
-			q.query = append(q.query, ',', ' ')
-		}
-		q.query = append(q.query, c...)
-	}
-	q.query = append(q.query, ')', ';')
-	return q
-}
-
-// CommentOnTable builds the query string for a COMMENT ON TABLE statement
-func CommentOnTable(table string, comment string) *Query {
-	q := getQuery()
-	q.query = append(q.query, "COMMENT ON TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " IS "...)
-	q.query = append(q.query, '"')
-	q.query = append(q.query, comment...)
-	q.query = append(q.query, '"', ';')
-	return q
-}
-
 // InsertInto is a function to start building an INSERT INTO query statement
 func InsertInto(table string, fields ...string) *Query {
 	return getQuery().InsertInto(table, fields...)
@@ -82,10 +41,10 @@ func With(name string, query *Query) *Query {
 func (q *Query) InsertInto(table string, fields ...string) *Query {
 	q.query = append(q.query, "INSERT INTO "...)
 	q.query = append(q.query, table...)
-	q.query = append(q.query, ' ', '(')
+	q.query = append(q.query, " ("...)
 	for i, f := range fields {
 		if i > 0 {
-			q.query = append(q.query, ',', ' ')
+			q.query = append(q.query, ", "...)
 		}
 		q.query = append(q.query, f...)
 	}
@@ -98,10 +57,10 @@ func (q *Query) Values(values ...any) *Query {
 	if !bytes.Contains(q.query, []byte(" VALUES")) {
 		q.query = append(q.query, " VALUES"...)
 	}
-	q.query = append(q.query, ' ', '(')
+	q.query = append(q.query, " ("...)
 	for i := range values {
 		if i > 0 {
-			q.query = append(q.query, ',', ' ')
+			q.query = append(q.query, ", "...)
 		}
 		q.query = append(q.query, '?')
 	}
@@ -133,7 +92,7 @@ func (q *Query) Set(fields map[string]any) *Query {
 		q.query = append(q.query, " = "...)
 		q.query = append(q.query, '?')
 		if i < len(fields)-1 {
-			q.query = append(q.query, ',', ' ')
+			q.query = append(q.query, ", "...)
 		}
 		q.args = append(q.args, value)
 		i++
@@ -146,7 +105,7 @@ func (q *Query) Select(exprs ...string) *Query {
 	q.query = append(q.query, "SELECT "...)
 	for i, expr := range exprs {
 		if i > 0 {
-			q.query = append(q.query, ',', ' ')
+			q.query = append(q.query, ", "...)
 		}
 		q.query = append(q.query, expr...)
 	}
@@ -194,7 +153,7 @@ func (q *Query) In(column string, values any) *Query {
 		for idx, value := range v {
 			q.query = append(q.query, '?')
 			if len(v) > 0 && idx < len(v)-1 {
-				q.query = append(q.query, ',', ' ')
+				q.query = append(q.query, ", "...)
 			}
 			q.args = append(q.args, value)
 		}
@@ -202,7 +161,7 @@ func (q *Query) In(column string, values any) *Query {
 		for idx, value := range v {
 			q.query = append(q.query, '?')
 			if len(v) > 0 && idx < len(v)-1 {
-				q.query = append(q.query, ',', ' ')
+				q.query = append(q.query, ", "...)
 			}
 			q.args = append(q.args, value)
 		}
@@ -210,7 +169,7 @@ func (q *Query) In(column string, values any) *Query {
 		for idx, value := range v.([]any) {
 			q.query = append(q.query, '?')
 			if len(v.([]any)) > 0 && idx < len(v.([]any))-1 {
-				q.query = append(q.query, ',', ' ')
+				q.query = append(q.query, ", "...)
 			}
 			q.args = append(q.args, value)
 		}
@@ -260,7 +219,7 @@ func (q *Query) OrderBy(exprs ...string) *Query {
 	q.query = append(q.query, " ORDER BY "...)
 	for i, expr := range exprs {
 		if i > 0 {
-			q.query = append(q.query, ',', ' ')
+			q.query = append(q.query, ", "...)
 		}
 		q.query = append(q.query, expr...)
 	}
@@ -272,7 +231,7 @@ func (q *Query) GroupBy(exprs ...string) *Query {
 	q.query = append(q.query, " GROUP BY "...)
 	for i, expr := range exprs {
 		if i > 0 {
-			q.query = append(q.query, ',', ' ')
+			q.query = append(q.query, ", "...)
 		}
 		q.query = append(q.query, expr...)
 	}
@@ -321,7 +280,7 @@ func (q *Query) Returning(fields ...string) *Query {
 	q.query = append(q.query, " RETURNING "...)
 	for i, f := range fields {
 		if i > 0 {
-			q.query = append(q.query, ',', ' ')
+			q.query = append(q.query, ", "...)
 		}
 		q.query = append(q.query, f...)
 	}
@@ -342,8 +301,224 @@ func (q *Query) With(name string, query *Query) *Query {
 	q.query = append(q.query, name...)
 	q.query = append(q.query, " AS ("...)
 	q.query = append(q.query, query.query...)
-	q.query = append(q.query, ')', ' ')
+	q.query = append(q.query, ") "...)
 	q.args = append(q.args, query.args...)
+	return q
+}
+
+// Begin is a function to start building a BEGIN query statement
+func Begin() *Query {
+	q := getQuery()
+	q.query = append(q.query, "BEGIN; "...)
+	return q
+}
+
+// Commit builds the query string for a COMMIT statement
+func (q *Query) Commit() *Query {
+	q.query = append(q.query, "COMMIT;"...)
+	return q
+}
+
+// CreateSchema builds the query string for a CREATE SCHEMA statement
+func (q *Query) CreateSchema(name string, owner string) *Query {
+	q.query = append(q.query, "CREATE SCHEMA "...)
+	q.query = append(q.query, name...)
+	if owner != "" {
+		q.query = append(q.query, " AUTHORIZATION "...)
+		q.query = append(q.query, owner...)
+	}
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// RenameSchema builds the query string for an ALTER SCHEMA ... RENAME TO statement
+func (q *Query) RenameSchema(name string, newName string) *Query {
+	q.query = append(q.query, "ALTER SCHEMA "...)
+	q.query = append(q.query, name...)
+	q.query = append(q.query, " RENAME TO "...)
+	q.query = append(q.query, newName...)
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// AlterSchemaOwner builds the query string for an ALTER SCHEMA ... OWNER TO statement
+func (q *Query) AlterSchemaOwner(name string, owner string) *Query {
+	q.query = append(q.query, "ALTER SCHEMA "...)
+	q.query = append(q.query, name...)
+	q.query = append(q.query, " OWNER TO "...)
+	q.query = append(q.query, owner...)
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// DropSchema builds the query string for a DROP SCHEMA statement
+func (q *Query) DropSchema(name string, cascade bool) *Query {
+	q.query = append(q.query, "DROP SCHEMA "...)
+	q.query = append(q.query, name...)
+	if cascade {
+		q.query = append(q.query, " CASCADE"...)
+	} else {
+		q.query = append(q.query, " RESTRICT"...)
+	}
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// CreateTable is a function to start building a CREATE TABLE query statement
+func (q *Query) CreateTable(table string, columns ...string) *Query {
+	q.query = append(q.query, "CREATE TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, ' ', '(')
+	for i, c := range columns {
+		if i > 0 {
+			q.query = append(q.query, ',', ' ')
+		}
+		q.query = append(q.query, c...)
+	}
+	q.query = append(q.query, ')', ';', ' ')
+	return q
+}
+
+// CommentOnTable builds the query string for a COMMENT ON TABLE statement
+func (q *Query) CommentOnTable(table string, comment string) *Query {
+	q.query = append(q.query, "COMMENT ON TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " IS "...)
+	q.query = append(q.query, "'"...)
+	q.query = append(q.query, comment...)
+	q.query = append(q.query, "'; "...)
+	return q
+}
+
+// RenameTable builds the query string for a RENAME TABLE statement
+func (q *Query) RenameTable(oldName string, newName string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, oldName...)
+	q.query = append(q.query, " RENAME TO "...)
+	q.query = append(q.query, newName...)
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// SetRowSecurity enables or disables row level security for a table
+func (q *Query) SetRowSecurity(table string, enable bool) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	if enable {
+		q.query = append(q.query, " ENABLE ROW LEVEL SECURITY"...)
+	} else {
+		q.query = append(q.query, " DISABLE ROW LEVEL SECURITY"...)
+	}
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// SetForceRowSecurity sets the FORCE ROW LEVEL SECURITY property for a table
+func (q *Query) SetForceRowSecurity(table string, force bool) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	if force {
+		q.query = append(q.query, " FORCE ROW LEVEL SECURITY"...)
+	} else {
+		q.query = append(q.query, " NO FORCE ROW LEVEL SECURITY"...)
+	}
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// DropTable builds the query string for a DROP TABLE statement with optional CASCADE
+func (q *Query) DropTable(table string, cascade bool) *Query {
+	q.query = append(q.query, "DROP TABLE "...)
+	q.query = append(q.query, table...)
+	if cascade {
+		q.query = append(q.query, " CASCADE"...)
+	} else {
+		q.query = append(q.query, " RESTRICT"...)
+	}
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// CommentOnColumn builds the query string for a COMMENT ON COLUMN statement
+func (q *Query) CommentOnColumn(table string, column string, comment string) *Query {
+	q.query = append(q.query, "COMMENT ON COLUMN "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, "."...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " IS "...)
+	q.query = append(q.query, "'"...)
+	q.query = append(q.query, comment...)
+	q.query = append(q.query, "'; "...)
+	return q
+}
+
+// AddColumn builds the query string for an ALTER TABLE ADD COLUMN statement
+func (q *Query) AddColumn(table string, column string, dataType string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " ADD COLUMN "...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " "...)
+	q.query = append(q.query, dataType...)
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// RenameColumn builds the query string for an ALTER TABLE RENAME COLUMN statement
+func (q *Query) RenameColumn(table string, oldName string, newName string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " RENAME COLUMN "...)
+	q.query = append(q.query, oldName...)
+	q.query = append(q.query, " TO "...)
+	q.query = append(q.query, newName...)
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// AlterColumnDataType builds the query string for an ALTER TABLE ALTER COLUMN TYPE statement
+func (q *Query) AlterColumnDataType(table string, column string, dataType string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " ALTER COLUMN "...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " TYPE "...)
+	q.query = append(q.query, dataType...)
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// AlterColumnDefault builds the query string for an ALTER TABLE ALTER COLUMN SET DEFAULT statement
+func (q *Query) AlterColumnSetDefault(table string, column string, defaultValue string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " ALTER COLUMN "...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " SET DEFAULT "...)
+	q.query = append(q.query, "'"...)
+	q.query = append(q.query, defaultValue...)
+	q.query = append(q.query, "'; "...)
+	return q
+}
+
+// AlterColumnDropDefault generates an ALTER TABLE ALTER COLUMN statement to drop the default value of a column
+func (q *Query) AlterColumnDropDefault(table string, column string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " ALTER COLUMN "...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " DROP DEFAULT"...)
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// DropColumn builds the query string for an ALTER TABLE DROP COLUMN statement
+func (q *Query) DropColumn(table string, column string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " DROP COLUMN "...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, "; "...)
 	return q
 }
 
