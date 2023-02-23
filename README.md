@@ -14,7 +14,7 @@ go get github.com/tinytoolkit/query
 - `Values(values ...any)`
 - `DeleteFrom(table string)`
 - `Update(table string)`
-- `Set(fields map[string]any)`
+- `Set(fields []*Field)`
 - `Select(exprs ...string)`
 - `From(table string)`
 - `Where(expr string, value any)`
@@ -47,7 +47,7 @@ go get github.com/tinytoolkit/query
 - `AlterForceRowSecurity(table string, force bool)`
 - `DropTable(table string, cascade bool)`
 - `CommentOnColumn(table string, column string, comment string)`
-- `AddColumn(table string, column string, dataType string)`
+- `AddColumn(table string, name string, dataType string, opts *ColumnOptions)`
 - `AlterColumnName(table string, oldName string, newName string)`
 - `AlterColumnType(table string, column string, dataType string)`
 - `AlterColumnSetDefault(table string, column string, defaultValue string)`
@@ -81,9 +81,9 @@ DeleteFrom("users").
 
 // UPDATE users SET name = $1, email = $2 WHERE id = $3
 Update("users").
-	Set(map[string]any{
-		"name":  "John",
-		"email": "john.doe@example.com",
+	Set([]*query.Field{
+		{"name", "John"},
+		{"email", "john.doe@example.com"},
 	}).
 	Where("id = ?", 1).
     Build()
