@@ -22,11 +22,11 @@ type (
 	// ColumnOptions is a struct representing the options for a column in a CREATE TABLE statement
 	ColumnOptions struct {
 		DefaultValue       string
+		Identity           bool
+		IdentityGeneration string
 		PrimaryKey         bool
 		NotNull            bool
 		Unique             bool
-		Identity           bool
-		IdentityGeneration string
 		Check              string
 	}
 
@@ -108,8 +108,6 @@ func (q *Query) DropSchema(name string, cascade bool) *Query {
 	q.query = append(q.query, name...)
 	if cascade {
 		q.query = append(q.query, " CASCADE"...)
-	} else {
-		q.query = append(q.query, " RESTRICT"...)
 	}
 	q.query = append(q.query, "; "...)
 	return q
@@ -215,8 +213,6 @@ func (q *Query) DropTable(table string, cascade bool) *Query {
 	q.query = append(q.query, table...)
 	if cascade {
 		q.query = append(q.query, " CASCADE"...)
-	} else {
-		q.query = append(q.query, " RESTRICT"...)
 	}
 	q.query = append(q.query, "; "...)
 	return q
@@ -386,16 +382,19 @@ func (q *Query) AlterColumnUsing(table string, column string, expression string)
 }
 
 // DropColumn is a function that returns a DROP COLUMN query
-func DropColumn(table string, column string) string {
-	return getQuery().DropColumn(table, column).String()
+func DropColumn(table string, column string, cascade bool) string {
+	return getQuery().DropColumn(table, column, cascade).String()
 }
 
 // DropColumn builds the query string for an ALTER TABLE DROP COLUMN statement
-func (q *Query) DropColumn(table string, column string) *Query {
+func (q *Query) DropColumn(table string, column string, cascade bool) *Query {
 	q.query = append(q.query, "ALTER TABLE "...)
 	q.query = append(q.query, table...)
 	q.query = append(q.query, " DROP COLUMN "...)
 	q.query = append(q.query, column...)
+	if cascade {
+		q.query = append(q.query, " CASCADE"...)
+	}
 	q.query = append(q.query, "; "...)
 	return q
 }

@@ -31,14 +31,8 @@ func TestAlterSchemaOwner(t *testing.T) {
 }
 
 func TestDropSchema(t *testing.T) {
-	q := query.Begin().DropSchema("test", false).Commit().String()
-	expected := "BEGIN; DROP SCHEMA test RESTRICT; COMMIT;"
-	if q != expected {
-		t.Errorf("Expected %s, got %s", expected, q)
-	}
-
-	q = query.Begin().DropSchema("test", true).Commit().String()
-	expected = "BEGIN; DROP SCHEMA test CASCADE; COMMIT;"
+	q := query.Begin().DropSchema("test", true).Commit().String()
+	expected := "BEGIN; DROP SCHEMA test CASCADE; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
@@ -173,8 +167,8 @@ func TestAlterColumnUsing(t *testing.T) {
 }
 
 func TestDropColumn(t *testing.T) {
-	q := query.Begin().DropColumn("users", "name").Commit().String()
-	expected := "BEGIN; ALTER TABLE users DROP COLUMN name; COMMIT;"
+	q := query.Begin().DropColumn("users", "name", true).Commit().String()
+	expected := "BEGIN; ALTER TABLE users DROP COLUMN name CASCADE; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
@@ -209,14 +203,8 @@ func TestAlterForceRowSecurity(t *testing.T) {
 }
 
 func TestDropTable(t *testing.T) {
-	q := query.Begin().DropTable("users", false).Commit().String()
-	expected := "BEGIN; DROP TABLE users RESTRICT; COMMIT;"
-	if q != expected {
-		t.Errorf("Expected %s, got %s", expected, q)
-	}
-
-	q = query.Begin().DropTable("users", true).Commit().String()
-	expected = "BEGIN; DROP TABLE users CASCADE; COMMIT;"
+	q := query.Begin().DropTable("users", true).Commit().String()
+	expected := "BEGIN; DROP TABLE users CASCADE; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
