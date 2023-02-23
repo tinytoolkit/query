@@ -151,7 +151,7 @@ func TestAlterColumnDropDefault(t *testing.T) {
 }
 
 func TestAlterColumnNull(t *testing.T) {
-	q := query.Begin().AlterColumnNull("users", "name", false).Commit().String()
+	q := query.Begin().AlterColumnNull("users", "name", true).Commit().String()
 	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name SET NOT NULL; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
@@ -161,6 +161,30 @@ func TestAlterColumnNull(t *testing.T) {
 func TestAlterColumnUsing(t *testing.T) {
 	q := query.Begin().AlterColumnUsing("users", "name", "name::varchar(255)").Commit().String()
 	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name USING name::varchar(255); COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAlterColumnAddGeneratedIdentity(t *testing.T) {
+	q := query.Begin().AlterColumnAddGeneratedIdentity("users", "name", "ALWAYS").Commit().String()
+	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name ADD GENERATED ALWAYS AS IDENTITY; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAlterColumnSetGenerated(t *testing.T) {
+	q := query.Begin().AlterColumnSetGenerated("users", "name", "ALWAYS").Commit().String()
+	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name SET GENERATED ALWAYS; COMMIT;"
+	if q != expected {
+		t.Errorf("Expected %s, got %s", expected, q)
+	}
+}
+
+func TestAlterColumnDropIdentity(t *testing.T) {
+	q := query.Begin().AlterColumnDropIdentity("users", "name").Commit().String()
+	expected := "BEGIN; ALTER TABLE users ALTER COLUMN name DROP IDENTITY IF EXISTS; COMMIT;"
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}

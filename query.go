@@ -345,20 +345,20 @@ func (q *Query) AlterColumnDropDefault(table string, column string) *Query {
 }
 
 // AlterColumnNull is a function that returns an ALTER COLUMN SET NOT NULL or DROP NOT NULL query
-func AlterColumnNull(table string, column string, nullable bool) string {
-	return getQuery().AlterColumnNull(table, column, nullable).String()
+func AlterColumnNull(table string, column string, notNull bool) string {
+	return getQuery().AlterColumnNull(table, column, notNull).String()
 }
 
 // AlterColumnNull alters a column to allow or disallow null values
-func (q *Query) AlterColumnNull(table string, column string, nullable bool) *Query {
+func (q *Query) AlterColumnNull(table string, column string, notNull bool) *Query {
 	q.query = append(q.query, "ALTER TABLE "...)
 	q.query = append(q.query, table...)
 	q.query = append(q.query, " ALTER COLUMN "...)
 	q.query = append(q.query, column...)
-	if nullable {
-		q.query = append(q.query, " DROP NOT NULL"...)
-	} else {
+	if notNull {
 		q.query = append(q.query, " SET NOT NULL"...)
+	} else {
+		q.query = append(q.query, " DROP NOT NULL"...)
 	}
 	q.query = append(q.query, "; "...)
 	return q
@@ -378,6 +378,55 @@ func (q *Query) AlterColumnUsing(table string, column string, expression string)
 	q.query = append(q.query, " USING "...)
 	q.query = append(q.query, expression...)
 	q.query = append(q.query, "; "...)
+	return q
+}
+
+// AlterColumnAddGeneratedIdentity is a function that returns an ALTER COLUMN ADD GENERATED AS IDENTITY query
+func AlterColumnAddGeneratedIdentity(table string, column string, generated string) string {
+	return getQuery().AlterColumnAddGeneratedIdentity(table, column, generated).String()
+}
+
+// AlterColumnAddGeneratedIdentity is a function that returns an ALTER COLUMN ADD GENERATED AS IDENTITY query
+func (q *Query) AlterColumnAddGeneratedIdentity(table string, column string, generated string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " ALTER COLUMN "...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " ADD GENERATED "...)
+	q.query = append(q.query, generated...)
+	q.query = append(q.query, " AS IDENTITY; "...)
+	return q
+}
+
+// AlterColumnSetGenerated is a function that returns an ALTER COLUMN SET GENERATED query
+func AlterColumnSetGenerated(table string, column string, generated string) string {
+	return getQuery().AlterColumnSetGenerated(table, column, generated).String()
+}
+
+// AlterColumnSetGenerated is a function that returns an ALTER COLUMN SET GENERATED query
+func (q *Query) AlterColumnSetGenerated(table string, column string, generated string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " ALTER COLUMN "...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " SET GENERATED "...)
+	q.query = append(q.query, generated...)
+	q.query = append(q.query, "; "...)
+	return q
+}
+
+// AlterColumnAddIdentity is a function that returns an ALTER COLUMN ADD IDENTITY query
+func AlterColumnDropIdentity(table string, column string) string {
+	return getQuery().AlterColumnDropIdentity(table, column).String()
+}
+
+// AlterColumnDropIdentity is a function that returns an ALTER COLUMN DROP IDENTITY query
+func (q *Query) AlterColumnDropIdentity(table string, column string) *Query {
+	q.query = append(q.query, "ALTER TABLE "...)
+	q.query = append(q.query, table...)
+	q.query = append(q.query, " ALTER COLUMN "...)
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " DROP IDENTITY IF EXISTS; "...)
 	return q
 }
 
