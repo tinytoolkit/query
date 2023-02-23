@@ -61,12 +61,14 @@ func TestCreateTable(t *testing.T) {
 }
 
 func TestCreateTableWithColumns(t *testing.T) {
+	c := []*query.Column{
+		{Name: "id", Type: "serial PRIMARY KEY"},
+		{Name: "name", Type: "varchar(255)"},
+		{Name: "email", Type: "varchar(255)"},
+	}
+
 	q := query.Begin().
-		CreateTable("users", map[string]string{
-			"id":    "serial PRIMARY KEY",
-			"name":  "varchar(255)",
-			"email": "varchar(255)",
-		}).
+		CreateTable("users", c).
 		Commit().
 		String()
 	expected := "BEGIN; CREATE TABLE users (id serial PRIMARY KEY, name varchar(255), email varchar(255)); COMMIT;"
@@ -106,8 +108,17 @@ func TestCommentOnColumn(t *testing.T) {
 }
 
 func TestAddColumn(t *testing.T) {
-	q := query.Begin().AddColumn("users", "age", "int").Commit().String()
-	expected := "BEGIN; ALTER TABLE users ADD COLUMN age int; COMMIT;"
+	opt := &query.ColumnOptions{
+		DefaultValue:       "0",
+		PrimaryKey:         true,
+		NotNull:            true,
+		Unique:             true,
+		Identity:           true,
+		IdentityGeneration: "ALWAYS",
+		Check:              "age > 0",
+	}
+	q := query.Begin().AddColumn("users", "age", "integer", opt).Commit().String()
+	expected := `BEGIN; ALTER TABLE users ADD COLUMN age integer DEFAULT 0 PRIMARY KEY NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY CHECK (age > 0); COMMIT;`
 	if q != expected {
 		t.Errorf("Expected %s, got %s", expected, q)
 	}
@@ -239,11 +250,12 @@ func TestDeleteFrom(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
+	fields := []*query.Field{
+		{"name", "John"},
+		{"email", "john.doe@example.com"},
+	}
 	q, v := query.Update("users").
-		Set(map[string]any{
-			"name":  "John",
-			"email": "john.doe@example.com",
-		}).
+		Set(fields).
 		Where("id = ?", 1).
 		Build()
 	expected := "UPDATE users SET name = $1, email = $2 WHERE id = $3"
@@ -573,16 +585,33 @@ func BenchmarkCreateSchema(b *testing.B) {
 
 func BenchmarkCreateTable(b *testing.B) {
 	for i := 0; i < b.N; i++ {
+		c := []*query.Column{
+			{Name: "id", Type: "serial PRIMARY KEY"},
+			{Name: "name", Type: "varchar(255)"},
+			{Name: "email", Type: "varchar(255)"},
+		}
+
 		_ = query.
 			Begin().
-			CreateTable("users", map[string]string{
-				"id":         "serial PRIMARY KEY",
-				"name":       "varchar(255)",
-				"email":      "varchar(255)",
-				"first_name": "varchar(255)",
-				"last_name":  "varchar(255)",
-				"country":    "varchar(255)",
-			}).
+			CreateTable("users", c).
+			Commit().
+			String()
+	}
+}
+
+func BenchmarkAddColumnWithOptions(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		opt := &query.ColumnOptions{
+			PrimaryKey:         true,
+			NotNull:            true,
+			Unique:             true,
+			Identity:           true,
+			IdentityGeneration: "ALWAYS",
+			Check:              "age > 0",
+		}
+		_ = query.
+			Begin().
+			AddColumn("users", "age", "integer", opt).
 			Commit().
 			String()
 	}
@@ -607,11 +636,13 @@ func BenchmarkDeleteFrom(b *testing.B) {
 
 func BenchmarkUpdate(b *testing.B) {
 	for i := 0; i < b.N; i++ {
+		fields := []*query.Field{
+			{"name", "John"},
+			{"email", "john.doe@example.com"},
+		}
+
 		_, _ = query.Update("users").
-			Set(map[string]any{
-				"name":  "John",
-				"email": "john.doe@example.com",
-			}).
+			Set(fields).
 			Where("id = ?", 1).
 			Build()
 	}

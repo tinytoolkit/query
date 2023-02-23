@@ -6,11 +6,36 @@ import (
 	"sync"
 )
 
-// Query is a struct representing a query statement
-type Query struct {
-	query []byte
-	args  []any
-}
+type (
+	// Query is a struct representing a query statement
+	Query struct {
+		query []byte
+		args  []any
+	}
+
+	// Column is a struct representing a column in a CREATE TABLE statement
+	Column struct {
+		Name string
+		Type string
+	}
+
+	// ColumnOptions is a struct representing the options for a column in a CREATE TABLE statement
+	ColumnOptions struct {
+		DefaultValue       string
+		PrimaryKey         bool
+		NotNull            bool
+		Unique             bool
+		Identity           bool
+		IdentityGeneration string
+		Check              string
+	}
+
+	// Field is a struct to hold the name and value of a field
+	Field struct {
+		Name  string
+		Value any
+	}
+)
 
 // Begin is a function to start building a BEGIN query statement
 func Begin() *Query {
@@ -91,24 +116,22 @@ func (q *Query) DropSchema(name string, cascade bool) *Query {
 }
 
 // CreateTable is a function that returns a CREATE TABLE query
-func CreateTable(table string, columns map[string]string) string {
+func CreateTable(table string, columns []*Column) string {
 	return getQuery().CreateTable(table, columns).String()
 }
 
 // CreateTable is a function to start building a CREATE TABLE query statement
-func (q *Query) CreateTable(table string, columns map[string]string) *Query {
+func (q *Query) CreateTable(table string, columns []*Column) *Query {
 	q.query = append(q.query, "CREATE TABLE "...)
 	q.query = append(q.query, table...)
 	q.query = append(q.query, " ("...)
-	i := 0
-	for column, definition := range columns {
-		q.query = append(q.query, column...)
+	for i, column := range columns {
+		q.query = append(q.query, column.Name...)
 		q.query = append(q.query, " "...)
-		q.query = append(q.query, definition...)
+		q.query = append(q.query, column.Type...)
 		if i < len(columns)-1 {
 			q.query = append(q.query, ", "...)
 		}
-		i++
 	}
 	q.query = append(q.query, "); "...)
 	return q
@@ -218,18 +241,41 @@ func (q *Query) CommentOnColumn(table string, column string, comment string) *Qu
 }
 
 // AddColumn is a function that returns an ADD COLUMN query
-func AddColumn(table string, column string, dataType string) string {
-	return getQuery().AddColumn(table, column, dataType).String()
+func AddColumn(table string, name string, dataType string, opts *ColumnOptions) string {
+	return getQuery().AddColumn(table, name, dataType, opts).String()
 }
 
-// AddColumn builds the query string for an ALTER TABLE ADD COLUMN statement
-func (q *Query) AddColumn(table string, column string, dataType string) *Query {
+// AddColumn builds the query string for an ADD COLUMN statement
+func (q *Query) AddColumn(table string, name string, dataType string, opts *ColumnOptions) *Query {
 	q.query = append(q.query, "ALTER TABLE "...)
 	q.query = append(q.query, table...)
 	q.query = append(q.query, " ADD COLUMN "...)
-	q.query = append(q.query, column...)
+	q.query = append(q.query, name...)
 	q.query = append(q.query, " "...)
 	q.query = append(q.query, dataType...)
+	if opts.DefaultValue != "" {
+		q.query = append(q.query, " DEFAULT "...)
+		q.query = append(q.query, opts.DefaultValue...)
+	}
+	if opts.PrimaryKey {
+		q.query = append(q.query, " PRIMARY KEY"...)
+	}
+	if opts.NotNull {
+		q.query = append(q.query, " NOT NULL"...)
+	}
+	if opts.Unique {
+		q.query = append(q.query, " UNIQUE"...)
+	}
+	if opts.Identity {
+		q.query = append(q.query, " GENERATED "...)
+		q.query = append(q.query, opts.IdentityGeneration...)
+		q.query = append(q.query, " AS IDENTITY"...)
+	}
+	if opts.Check != "" {
+		q.query = append(q.query, " CHECK ("...)
+		q.query = append(q.query, opts.Check...)
+		q.query = append(q.query, ")"...)
+	}
 	q.query = append(q.query, "; "...)
 	return q
 }
@@ -417,16 +463,14 @@ func (q *Query) Update(table string) *Query {
 }
 
 // Set builds the query string for the SET clause in an UPDATE statement
-func (q *Query) Set(fields map[string]any) *Query {
-	i := 0
-	for field, value := range fields {
-		q.query = append(q.query, field...)
+func (q *Query) Set(fields []*Field) *Query {
+	for i, field := range fields {
+		q.query = append(q.query, field.Name...)
 		q.query = append(q.query, " = ?"...)
 		if i < len(fields)-1 {
 			q.query = append(q.query, ", "...)
 		}
-		q.args = append(q.args, value)
-		i++
+		q.args = append(q.args, field.Value)
 	}
 	return q
 }
