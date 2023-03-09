@@ -754,8 +754,17 @@ func (q *Query) String() string {
 	return query
 }
 
-// Build returns the built query string and arguments and resets the query
+// Build builds the query string and returns the query string and arguments
 func (q *Query) Build() (string, []any) {
+	query := string(q.query)
+	args := q.args
+
+	q.Reset()
+	return query, args
+}
+
+// BuildPostgres builds the query string for PostgreSQL and returns the query string and arguments
+func (q *Query) BuildPostgres() (string, []any) {
 	replacementIndex := 1
 	for i := 0; i < len(q.query); i++ {
 		if q.query[i] == '?' {

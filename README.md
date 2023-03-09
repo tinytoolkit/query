@@ -1,6 +1,6 @@
 # tinytoolkit/query
 
-A simple PostgreSQL query builder library for Go.
+A simple SQL query builder library for Go.
 
 ## Installation
 
@@ -10,7 +10,7 @@ go get github.com/tinytoolkit/query
 
 ## Supported Queries
 
-- `InsertInto(table string, fields ...string)` 
+- `InsertInto(table string, fields ...string)`
 - `Values(values ...any)`
 - `DeleteFrom(table string)`
 - `Update(table string)`
