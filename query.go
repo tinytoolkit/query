@@ -808,21 +808,21 @@ func (q *Query) Raw(query string, args ...any) *Query {
 	return q
 }
 
-// Arg is a function that appends an argument to the query
-func (q *Query) Arg(arg any) *Query {
-	q.args = append(q.args, arg)
-	return q
-}
-
-// Query is a function that returns the query string
-func (q *Query) Query() string {
+// String is a function that returns the query string
+func (q *Query) String() string {
 	query := string(q.query)
 	q.Reset()
 	return query
 }
 
-// Build is a function that returns the query string and arguments
-func (q *Query) Build() (string, []any) {
+// Args is a function that appends arguments to the query
+func (q *Query) Args(args ...any) *Query {
+	q.args = append(q.args, args)
+	return q
+}
+
+// Query is a function that returns the query string and arguments
+func (q *Query) Query() (string, []any) {
 	query := string(q.query)
 	args := q.args
 
