@@ -817,7 +817,7 @@ func (q *Query) String() string {
 
 // Args is a function that appends arguments to the query
 func (q *Query) Args(args ...any) *Query {
-	q.args = append(q.args, args)
+	q.args = append(q.args, args...)
 	return q
 }
 
