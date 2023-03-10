@@ -573,10 +573,9 @@ func (q *Query) From(tables ...string) *Query {
 }
 
 // Where is a function that returns a WHERE clause for the specified expression and value
-func (q *Query) Where(expr string, value any) *Query {
+func (q *Query) Where(expr string) *Query {
 	q.query = append(q.query, " WHERE "...)
 	q.query = append(q.query, expr...)
-	q.args = append(q.args, value)
 	return q
 }
 
@@ -617,10 +616,9 @@ func (q *Query) FullJoin(table, condition string) *Query {
 }
 
 // Having is a function that adds a HAVING clause to the query for the specified conditions
-func (q *Query) Having(condition string, value any) *Query {
+func (q *Query) Having(condition string) *Query {
 	q.query = append(q.query, " HAVING "...)
 	q.query = append(q.query, condition...)
-	q.args = append(q.args, value)
 	return q
 }
 
@@ -750,10 +748,9 @@ func (q *Query) Not(query *Query) *Query {
 }
 
 // Like is a function that returns a LIKE WHERE clause for the specified column and value
-func (q *Query) Like(column string, value any) *Query {
+func (q *Query) Like(column string) *Query {
 	q.query = append(q.query, column...)
 	q.query = append(q.query, " LIKE ?"...)
-	q.args = append(q.args, value)
 	return q
 }
 
@@ -808,6 +805,12 @@ func (q *Query) Vacuum(schemaName, fileName string) *Query {
 func (q *Query) Raw(query string, args ...any) *Query {
 	q.query = append(q.query, query...)
 	q.args = append(q.args, args...)
+	return q
+}
+
+// Arg is a function that appends an argument to the query
+func (q *Query) Arg(arg any) *Query {
+	q.args = append(q.args, arg)
 	return q
 }
 

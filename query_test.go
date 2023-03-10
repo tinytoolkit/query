@@ -162,7 +162,8 @@ func TestCreateTrigger(t *testing.T) {
 }
 
 func TestDeleteFrom(t *testing.T) {
-	q := query.DeleteFrom("foo").Where("id = ?", 1).Query()
+	q := query.DeleteFrom("foo").Where("id = ?").Arg(1).Query()
+
 	expected := "DELETE FROM foo WHERE id = ?"
 	if q != expected {
 		t.Errorf("Expected query '%s', but got '%s'", expected, q)
@@ -240,7 +241,7 @@ func TestJoins(t *testing.T) {
 }
 
 func TestHaving(t *testing.T) {
-	q := query.Select("name", "age").From("foo").Having("age > ?", 1).Query()
+	q := query.Select("name", "age").From("foo").Having("age > ?").Arg(1).Query()
 	expected := "SELECT name, age FROM foo HAVING age > ?"
 	if q != expected {
 		t.Errorf("Expected query '%s', but got '%s'", expected, q)
