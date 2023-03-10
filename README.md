@@ -1,6 +1,6 @@
 # tinytoolkit/query
 
-A simple SQL query builder library for Go.
+A simple and fast SQLite query builder library for Go.
 
 ## Installation
 
@@ -8,127 +8,53 @@ A simple SQL query builder library for Go.
 go get github.com/tinytoolkit/query
 ```
 
-## Supported Queries
+## Queries
 
-- `InsertInto(table string, fields ...string)`
-- `Values(values ...any)`
-- `DeleteFrom(table string)`
-- `Update(table string)`
-- `Set(fields []*Field)`
-- `Select(exprs ...string)`
-- `From(table string)`
-- `Where(expr string, value any)`
-- `And()`
-- `Or()`
-- `In(column string, values any)`
-- `Join(table string, onConditions string)`
-- `LeftJoin(table string, onConditions string)`
-- `RightJoin(table string, onConditions string)`
-- `FullJoin(table string, onConditions string)`
-- `OrderBy(expr ...string)`
-- `GroupBy(exprs ...string)`
-- `Having(expr string, value any)`
-- `Limit(limit int)`
-- `Offset(offset int)`
-- `Paginate(page int, pageSize int)`
-- `Returning(columns ...string)`
-- `Union(other *Query)`
-- `With(name string, query *Query)`
-- `Begin()`
-- `Commit()`
-- `CreateSchema(name string, owner string)`
-- `AlterSchemaName(oldName string, newName string)`
-- `AlterSchemaOwner(name string, owner string)`
-- `DropSchema(name string, cascade bool)`
-- `CreateTable(table string, columns ...string)`
-- `CommentOnTable(table string, comment string)`
-- `AlterTableName(oldName string, newName string)`
-- `AlterRowSecurity(table string, enable bool)`
-- `AlterForceRowSecurity(table string, force bool)`
-- `DropTable(table string, cascade bool)`
-- `CommentOnColumn(table string, column string, comment string)`
-- `AddColumn(table string, name string, dataType string, opts *ColumnOptions)`
-- `AlterColumnName(table string, oldName string, newName string)`
-- `AlterColumnType(table string, column string, dataType string)`
-- `AlterColumnSetDefault(table string, column string, defaultValue string)`
-- `AlterColumnDropDefault(table string, column string)`\
-- `AlterColumnNull(table string, column string, nullable bool)`
-- `AlterColumnUsing(table string, column string, dataType string)`
-- `DropColumn(table string, column string)`
-- `Raw(query string, args ...any)`
-
-### Usage
-
-```go
-// Build returns both the query string and the arguments to be passed to the database driver.
-// Use ? as placeholders for arguments. They will automatically be replaced with $1, $2, etc.
-
-// INSERT INTO users (name, email) VALUES ($1, $2)
-InsertInto("users", "name", "email").
-    Values("Jane", "jane@gmail.com").
-    Build()
-
-// INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name
-InsertInto("users", "name", "email").
-	Values("John", "johndoe@gmail.com").
-	Returning("id", "name").
-	Build()
-
-// DELETE FROM users WHERE id = $1
-DeleteFrom("users").
-    Where("id = ?", 1).
-    Build()
-
-// UPDATE users SET name = $1, email = $2 WHERE id = $3
-Update("users").
-	Set([]*query.Field{
-		{"name", "John"},
-		{"email", "john.doe@example.com"},
-	}).
-	Where("id = ?", 1).
-    Build()
-
-// SELECT name, email FROM users WHERE id = $1
-Select("name", "email").
-	From("users").
-	Where("id = ?", 1).
-	Build()
-
-// SELECT * FROM users WHERE id = $1 AND name = $2 OR age > $3
-Select("*").
-	From("users").
-	Where("id = ?", 1).
-	And().
-	Where("name = ?", "John").
-	Or().
-	Where("age > ?", 18).
-	Build()
-
-// SELECT name, email FROM users WHERE id IN ($1, $2, $3)
-Select("name", "email").
-	From("users").
-	In("id", []int{1, 2, 3}).
-	Build()
-
-// SELECT name, email FROM users WHERE id = $1 ORDER BY age DESC
-Select("name", "email").
-	From("users").
-	Where("id = ?", 1).
-	OrderBy("age DESC").
-	Build()
-
-// SELECT name, email FROM users JOIN posts ON users.id = posts.user_id WHERE users.id = $1
-Select("name", "email").
-	From("users").
-	Join("posts", "users.id = posts.user_id").
-	Where("users.id = ?", 1).
-	Build()
-
-// SELECT name, email FROM users WHERE id = $1 OFFSET $2 LIMIT $3
-Select("name", "email").
-	From("users").
-	Where("id = ?", 1).
-	Offset(10).
-	Limit(5).
-	Build()
-```
+- [x] `ANALYZE`
+- [x] `EXPLAIN`
+- [x] `PRAGMA`
+- [x] `SELECT`
+- [x] `INSERT`
+- [x] `UPDATE`
+- [x] `DELETE`
+- [x] `CREATE TABLE`
+- [x] `DROP TABLE`
+- [x] `CREATE INDEX`
+- [x] `DROP INDEX`
+- [x] `CREATE VIEW`
+- [x] `DROP VIEW`
+- [x] `CREATE TRIGGER`
+- [x] `DROP TRIGGER`
+- [x] `ALTER TABLE`
+- [x] `RENAME TABLE`
+- [x] `ATTACH`
+- [x] `DETACH`
+- [x] `BEGIN`
+- [x] `COMMIT`
+- [x] `ROLLBACK`
+- [x] `SAVEPOINT`
+- [x] `RELEASE`
+- [x] `ROLLBACK TO`
+- [x] `REINDEX`
+- [x] `VACUUM`
+- [x] `WITH`
+- [x] `UNION`
+- [x] `ORDER BY`
+- [x] `GROUP BY`
+- [x] `HAVING`
+- [x] `LIMIT`
+- [x] `OFFSET`
+- [x] `WHERE`
+- [x] `JOIN`
+- [x] `INNER JOIN`
+- [x] `LEFT JOIN`
+- [x] `RIGHT JOIN`
+- [x] `FULL JOIN`
+- [x] `ON`
+- [x] `USING`
+- [x] `VALUES`
+- [x] `SET`
+- [x] `OR`
+- [x] `AND`
+- [x] `NOT`
+- [x] `LIKE`

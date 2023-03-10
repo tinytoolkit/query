@@ -1,487 +1,432 @@
 package query
 
 import (
-	"bytes"
-	"strconv"
+	"strings"
 	"sync"
 )
 
-type (
-	// Query is a struct representing a query statement
-	Query struct {
-		query []byte
-		args  []any
-	}
+// Query is a struct that represents a query
+type Query struct {
+	query []byte
+	args  []any
+}
 
-	// Column is a struct representing a column in a CREATE TABLE statement
-	Column struct {
-		Name string
-		Type string
-	}
+// Analyze is a function that returns an ANALYZE query
+func Analyze(query string) *Query {
+	return getQuery().Analyze(query)
+}
 
-	// ColumnOptions is a struct representing the options for a column in a CREATE TABLE statement
-	ColumnOptions struct {
-		DefaultValue       string
-		Identity           bool
-		IdentityGeneration string
-		PrimaryKey         bool
-		NotNull            bool
-		Unique             bool
-		Check              string
-	}
-
-	// Field is a struct to hold the name and value of a field
-	Field struct {
-		Name  string
-		Value any
-	}
-)
-
-// Begin is a function to start building a BEGIN query statement
-func Begin() *Query {
-	q := getQuery()
-	q.query = append(q.query, "BEGIN; "...)
+// Analyze is a function that returns an ANALYZE query
+func (q *Query) Analyze(query string) *Query {
+	q.query = append(q.query, "ANALYZE "...)
+	q.query = append(q.query, query...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// Commit builds the query string for a COMMIT statement
+// Explain is a function that returns an EXPLAIN query
+func Explain(query string) *Query {
+	return getQuery().Explain(query)
+}
+
+// Explain is a function that returns an EXPLAIN query
+func (q *Query) Explain(query string) *Query {
+	q.query = append(q.query, "EXPLAIN "...)
+	q.query = append(q.query, query...)
+	return q
+}
+
+// Begin is a function that returns a BEGIN TRANSACTION query with the specified mode
+func Begin(mode string) *Query {
+	return getQuery().Begin(mode)
+}
+
+// Begin is a function that returns a BEGIN TRANSACTION query with the specified mode
+func (q *Query) Begin(mode string) *Query {
+	q.query = append(q.query, "BEGIN "...)
+	if mode != "" {
+		q.query = append(q.query, strings.ToUpper(mode)...)
+		q.query = append(q.query, " "...)
+	}
+	q.query = append(q.query, "TRANSACTION;"...)
+	return q
+}
+
+// Commit is a function that returns a COMMIT TRANSACTION query
+func Commit() *Query {
+	return getQuery().Commit()
+}
+
+// Commit is a function that returns a COMMIT TRANSACTION query
 func (q *Query) Commit() *Query {
-	q.query = append(q.query, "COMMIT;"...)
+	q.query = append(q.query, "COMMIT TRANSACTION;"...)
 	return q
 }
 
-// CreateSchema is a function that returns a CREATE SCHEMA query
-func CreateSchema(name string, owner string) string {
-	return getQuery().CreateSchema(name, owner).String()
+// Rollback is a function that returns a ROLLBACK TRANSACTION query
+func Rollback(savepoint string) *Query {
+	return getQuery().Rollback(savepoint)
 }
 
-// CreateSchema builds the query string for a CREATE SCHEMA statement
-func (q *Query) CreateSchema(name string, owner string) *Query {
-	q.query = append(q.query, "CREATE SCHEMA "...)
-	q.query = append(q.query, name...)
-	if owner != "" {
-		q.query = append(q.query, " AUTHORIZATION "...)
-		q.query = append(q.query, owner...)
+// Rollback is a function that returns a ROLLBACK TRANSACTION query
+func (q *Query) Rollback(savepoint string) *Query {
+	q.query = append(q.query, "ROLLBACK TRANSACTION"...)
+	if savepoint != "" {
+		q.query = append(q.query, " TO SAVEPOINT "...)
+		q.query = append(q.query, savepoint...)
 	}
-	q.query = append(q.query, "; "...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// AlterSchemaName is a function that returns a RENAME SCHEMA query
-func AlterSchemaName(name string, newName string) string {
-	return getQuery().AlterSchemaName(name, newName).String()
+// Savepoint is a function that adds a SAVEPOINT statement to the query for the specified savepoint name
+func Savepoint(name string) *Query {
+	return getQuery().Savepoint(name)
 }
 
-// AlterSchemaName builds the query string for an ALTER SCHEMA ... RENAME TO statement
-func (q *Query) AlterSchemaName(name string, newName string) *Query {
-	q.query = append(q.query, "ALTER SCHEMA "...)
+// Savepoint is a function that adds a SAVEPOINT statement to the query for the specified savepoint name
+func (q *Query) Savepoint(name string) *Query {
+	q.query = append(q.query, "SAVEPOINT "...)
 	q.query = append(q.query, name...)
-	q.query = append(q.query, " RENAME TO "...)
-	q.query = append(q.query, newName...)
-	q.query = append(q.query, "; "...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// AlterSchemaOwner is a function that returns an ALTER SCHEMA OWNER TO query
-func AlterSchemaOwner(name string, owner string) string {
-	return getQuery().AlterSchemaOwner(name, owner).String()
+// ReleaseSavepoint is a function that adds a RELEASE SAVEPOINT statement to the query for the specified savepoint name
+func ReleaseSavepoint(name string) *Query {
+	return getQuery().ReleaseSavepoint(name)
 }
 
-// AlterSchemaOwner builds the query string for an ALTER SCHEMA ... OWNER TO statement
-func (q *Query) AlterSchemaOwner(name string, owner string) *Query {
-	q.query = append(q.query, "ALTER SCHEMA "...)
+// ReleaseSavepoint is a function that adds a RELEASE SAVEPOINT statement to the query for the specified savepoint name
+func (q *Query) ReleaseSavepoint(name string) *Query {
+	q.query = append(q.query, "RELEASE SAVEPOINT "...)
 	q.query = append(q.query, name...)
-	q.query = append(q.query, " OWNER TO "...)
-	q.query = append(q.query, owner...)
-	q.query = append(q.query, "; "...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// DropSchema is a function that returns a DROP SCHEMA query
-func DropSchema(name string, cascade bool) string {
-	return getQuery().DropSchema(name, cascade).String()
+// AttachDatabase is a function that returns an ATTACH DATABASE query
+func AttachDatabase(databaseName, alias string) *Query {
+	return getQuery().AttachDatabase(databaseName, alias)
 }
 
-// DropSchema builds the query string for a DROP SCHEMA statement
-func (q *Query) DropSchema(name string, cascade bool) *Query {
-	q.query = append(q.query, "DROP SCHEMA "...)
+// AttachDatabase is a function that returns an ATTACH DATABASE query
+func (q *Query) AttachDatabase(databaseName, alias string) *Query {
+	q.query = append(q.query, "ATTACH DATABASE "...)
+	q.query = append(q.query, "'"...)
+	q.query = append(q.query, databaseName...)
+	q.query = append(q.query, "'"...)
+	q.query = append(q.query, " AS "...)
+	q.query = append(q.query, alias...)
+	q.query = append(q.query, ";"...)
+	return q
+}
+
+// DetachDatabase is a function that returns a DETACH DATABASE query
+func DetachDatabase(alias string) *Query {
+	return getQuery().DetachDatabase(alias)
+}
+
+// DetachDatabase is a function that returns a DETACH DATABASE query
+func (q *Query) DetachDatabase(alias string) *Query {
+	q.query = append(q.query, "DETACH DATABASE "...)
+	q.query = append(q.query, alias...)
+	q.query = append(q.query, ";"...)
+	return q
+}
+
+// Pragma is a function that returns a PRAGMA query
+func Pragma(name, value string) *Query {
+	return getQuery().Pragma(name, value)
+}
+
+// Pragma is a function that returns a PRAGMA query
+func (q *Query) Pragma(name, value string) *Query {
+	q.query = append(q.query, "PRAGMA "...)
 	q.query = append(q.query, name...)
-	if cascade {
-		q.query = append(q.query, " CASCADE"...)
+	if value != "" {
+		q.query = append(q.query, " = "...)
+		q.query = append(q.query, value...)
 	}
-	q.query = append(q.query, "; "...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// CreateTable is a function that returns a CREATE TABLE query
-func CreateTable(table string, columns []*Column) string {
-	return getQuery().CreateTable(table, columns).String()
+// Column is a struct representing a column in a CREATE TABLE statement
+type Column struct {
+	Name          string
+	Type          string
+	PrimaryKey    bool
+	AutoIncrement bool
+	Unique        bool
+	NotNull       bool
+	Check         string
+	Default       string
+	Collate       string
+	References    string
+	OnUpdate      string
+	OnDelete      string
 }
 
-// CreateTable is a function to start building a CREATE TABLE query statement
-func (q *Query) CreateTable(table string, columns []*Column) *Query {
+// CreateTable is a function that returns a CREATE TABLE query with the specified options
+func CreateTable(tableName string, columns []Column, options ...string) *Query {
+	return getQuery().CreateTable(tableName, columns, options...)
+}
+
+// CreateTable is a function that returns a CREATE TABLE query with the specified options
+func (q *Query) CreateTable(tableName string, columns []Column, options ...string) *Query {
 	q.query = append(q.query, "CREATE TABLE "...)
-	q.query = append(q.query, table...)
+	q.query = append(q.query, tableName...)
 	q.query = append(q.query, " ("...)
 	for i, column := range columns {
+		if i > 0 {
+			q.query = append(q.query, ", "...)
+		}
 		q.query = append(q.query, column.Name...)
 		q.query = append(q.query, " "...)
 		q.query = append(q.query, column.Type...)
-		if i < len(columns)-1 {
-			q.query = append(q.query, ", "...)
+		if column.PrimaryKey {
+			q.query = append(q.query, " PRIMARY KEY"...)
+			if column.AutoIncrement {
+				q.query = append(q.query, " AUTOINCREMENT"...)
+			}
+		}
+		if column.Unique {
+			q.query = append(q.query, " UNIQUE"...)
+		}
+		if column.NotNull {
+			q.query = append(q.query, " NOT NULL"...)
+		}
+		if column.Check != "" {
+			q.query = append(q.query, " CHECK ("...)
+			q.query = append(q.query, column.Check...)
+			q.query = append(q.query, ")"...)
+		}
+		if column.Default != "" {
+			q.query = append(q.query, " DEFAULT "...)
+			q.query = append(q.query, column.Default...)
+		}
+		if column.Collate != "" {
+			q.query = append(q.query, " COLLATE "...)
+			q.query = append(q.query, column.Collate...)
+		}
+		if column.References != "" {
+			q.query = append(q.query, " REFERENCES "...)
+			q.query = append(q.query, column.References...)
+			if column.OnUpdate != "" {
+				q.query = append(q.query, " ON UPDATE "...)
+				q.query = append(q.query, column.OnUpdate...)
+			}
+			if column.OnDelete != "" {
+				q.query = append(q.query, " ON DELETE "...)
+				q.query = append(q.query, column.OnDelete...)
+			}
 		}
 	}
-	q.query = append(q.query, "); "...)
+	q.query = append(q.query, ")"...)
+	if len(options) > 0 {
+		q.query = append(q.query, " "...)
+		q.query = append(q.query, strings.Join(options, " ")...)
+	}
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// CommentOnTable is a function that returns a COMMENT ON TABLE query
-func CommentOnTable(table string, comment string) string {
-	return getQuery().CommentOnTable(table, comment).String()
+// DropTable is a function that returns a DROP TABLE query for the specified table
+func DropTable(tableName string) *Query {
+	return getQuery().DropTable(tableName)
 }
 
-// CommentOnTable builds the query string for a COMMENT ON TABLE statement
-func (q *Query) CommentOnTable(table string, comment string) *Query {
-	q.query = append(q.query, "COMMENT ON TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " IS "...)
-	q.query = append(q.query, "'"...)
-	q.query = append(q.query, comment...)
-	q.query = append(q.query, "'; "...)
+// DropTable is a function that returns a DROP TABLE query for the specified table
+func (q *Query) DropTable(tableName string) *Query {
+	q.query = append(q.query, "DROP TABLE "...)
+	q.query = append(q.query, tableName...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
 // AlterTableName is a function that returns a RENAME TABLE query
-func AlterTableName(oldName string, newName string) string {
-	return getQuery().AlterTableName(oldName, newName).String()
+func AlterTable(tableName string) *Query {
+	return getQuery().AlterTable(tableName)
 }
 
 // AlterTableName builds the query string for a RENAME TABLE statement
-func (q *Query) AlterTableName(oldName string, newName string) *Query {
+func (q *Query) AlterTable(tableName string) *Query {
 	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, oldName...)
+	q.query = append(q.query, tableName...)
+	return q
+}
+
+// RenameTo is a function that returns a RENAME TO query
+func (q *Query) RenameTo(newName string) *Query {
 	q.query = append(q.query, " RENAME TO "...)
 	q.query = append(q.query, newName...)
-	q.query = append(q.query, "; "...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// AlterRowSecurity is a function that returns a SET ROW SECURITY query
-func AlterRowSecurity(table string, enable bool) string {
-	return getQuery().AlterRowSecurity(table, enable).String()
-}
-
-// AlterRowSecurity enables or disables row level security for a table
-func (q *Query) AlterRowSecurity(table string, enable bool) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	if enable {
-		q.query = append(q.query, " ENABLE ROW LEVEL SECURITY"...)
-	} else {
-		q.query = append(q.query, " DISABLE ROW LEVEL SECURITY"...)
-	}
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// AlterForceRowSecurity is a function that returns a SET FORCE ROW SECURITY query
-func AlterForceRowSecurity(table string, force bool) string {
-	return getQuery().AlterForceRowSecurity(table, force).String()
-}
-
-// AlterForceRowSecurity sets the FORCE ROW LEVEL SECURITY property for a table
-func (q *Query) AlterForceRowSecurity(table string, force bool) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	if force {
-		q.query = append(q.query, " FORCE ROW LEVEL SECURITY"...)
-	} else {
-		q.query = append(q.query, " NO FORCE ROW LEVEL SECURITY"...)
-	}
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// DropTable is a function that returns a DROP TABLE query
-func DropTable(table string, cascade bool) string {
-	return getQuery().DropTable(table, cascade).String()
-}
-
-// DropTable builds the query string for a DROP TABLE statement with optional CASCADE
-func (q *Query) DropTable(table string, cascade bool) *Query {
-	q.query = append(q.query, "DROP TABLE "...)
-	q.query = append(q.query, table...)
-	if cascade {
-		q.query = append(q.query, " CASCADE"...)
-	}
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// CommentOnColumn is a function that returns a COMMENT ON COLUMN query
-func CommentOnColumn(table string, column string, comment string) string {
-	return getQuery().CommentOnColumn(table, column, comment).String()
-}
-
-// CommentOnColumn builds the query string for a COMMENT ON COLUMN statement
-func (q *Query) CommentOnColumn(table string, column string, comment string) *Query {
-	q.query = append(q.query, "COMMENT ON COLUMN "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, "."...)
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " IS "...)
-	q.query = append(q.query, "'"...)
-	q.query = append(q.query, comment...)
-	q.query = append(q.query, "'; "...)
-	return q
-}
-
-// AddColumn is a function that returns an ADD COLUMN query
-func AddColumn(table string, name string, dataType string, opts *ColumnOptions) string {
-	return getQuery().AddColumn(table, name, dataType, opts).String()
-}
-
-// AddColumn builds the query string for an ADD COLUMN statement
-func (q *Query) AddColumn(table string, name string, dataType string, opts *ColumnOptions) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ADD COLUMN "...)
-	q.query = append(q.query, name...)
-	q.query = append(q.query, " "...)
-	q.query = append(q.query, dataType...)
-	if opts.DefaultValue != "" {
-		q.query = append(q.query, " DEFAULT "...)
-		q.query = append(q.query, opts.DefaultValue...)
-	}
-	if opts.PrimaryKey {
-		q.query = append(q.query, " PRIMARY KEY"...)
-	}
-	if opts.NotNull {
-		q.query = append(q.query, " NOT NULL"...)
-	}
-	if opts.Unique {
-		q.query = append(q.query, " UNIQUE"...)
-	}
-	if opts.Identity {
-		q.query = append(q.query, " GENERATED "...)
-		q.query = append(q.query, opts.IdentityGeneration...)
-		q.query = append(q.query, " AS IDENTITY"...)
-	}
-	if opts.Check != "" {
-		q.query = append(q.query, " CHECK ("...)
-		q.query = append(q.query, opts.Check...)
-		q.query = append(q.query, ")"...)
-	}
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// AlterColumnName is a function that returns a RENAME COLUMN query
-func AlterColumnName(table string, column string, newColumn string) string {
-	return getQuery().AlterColumnName(table, column, newColumn).String()
-}
-
-// AlterColumnName builds the query string for an ALTER TABLE RENAME COLUMN statement
-func (q *Query) AlterColumnName(table string, oldName string, newName string) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
+// RenameColumn is a function that returns a RENAME COLUMN query
+func (q *Query) RenameColumn(oldName, newName string) *Query {
 	q.query = append(q.query, " RENAME COLUMN "...)
 	q.query = append(q.query, oldName...)
 	q.query = append(q.query, " TO "...)
 	q.query = append(q.query, newName...)
-	q.query = append(q.query, "; "...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// AlterColumnType is a function that returns an ALTER COLUMN TYPE query
-func AlterColumnType(table string, column string, dataType string) string {
-	return getQuery().AlterColumnType(table, column, dataType).String()
-}
-
-// AlterColumnType builds the query string for an ALTER TABLE ALTER COLUMN TYPE statement
-func (q *Query) AlterColumnType(table string, column string, dataType string) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ALTER COLUMN "...)
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " TYPE "...)
-	q.query = append(q.query, dataType...)
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// AlterColumnSetDefault is a function that returns an ALTER COLUMN SET DEFAULT query
-func AlterColumnSetDefault(table string, column string, defaultValue string) string {
-	return getQuery().AlterColumnSetDefault(table, column, defaultValue).String()
-}
-
-// AlterColumnDefault builds the query string for an ALTER TABLE ALTER COLUMN SET DEFAULT statement
-func (q *Query) AlterColumnSetDefault(table string, column string, defaultValue string) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ALTER COLUMN "...)
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " SET DEFAULT "...)
-	q.query = append(q.query, "'"...)
-	q.query = append(q.query, defaultValue...)
-	q.query = append(q.query, "'; "...)
-	return q
-}
-
-// AlterColumnDropDefault is a function that returns an ALTER COLUMN DROP DEFAULT query
-func AlterColumnDropDefault(table string, column string) string {
-	return getQuery().AlterColumnDropDefault(table, column).String()
-}
-
-// AlterColumnDropDefault generates an ALTER TABLE ALTER COLUMN statement to drop the default value of a column
-func (q *Query) AlterColumnDropDefault(table string, column string) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ALTER COLUMN "...)
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " DROP DEFAULT"...)
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// AlterColumnNull is a function that returns an ALTER COLUMN SET NOT NULL or DROP NOT NULL query
-func AlterColumnNull(table string, column string, notNull bool) string {
-	return getQuery().AlterColumnNull(table, column, notNull).String()
-}
-
-// AlterColumnNull alters a column to allow or disallow null values
-func (q *Query) AlterColumnNull(table string, column string, notNull bool) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ALTER COLUMN "...)
-	q.query = append(q.query, column...)
-	if notNull {
-		q.query = append(q.query, " SET NOT NULL"...)
-	} else {
-		q.query = append(q.query, " DROP NOT NULL"...)
+// AddColumn is a function that returns an ADD COLUMN query
+func (q *Query) AddColumn(column Column, options ...string) *Query {
+	q.query = append(q.query, " ADD COLUMN "...)
+	q.query = append(q.query, column.Name...)
+	q.query = append(q.query, " "...)
+	q.query = append(q.query, column.Type...)
+	if column.PrimaryKey {
+		q.query = append(q.query, " PRIMARY KEY"...)
+		if column.AutoIncrement {
+			q.query = append(q.query, " AUTOINCREMENT"...)
+		}
 	}
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// AlterColumnUsing is a function that returns an ALTER COLUMN USING query
-func AlterColumnUsing(table string, column string, expression string) string {
-	return getQuery().AlterColumnUsing(table, column, expression).String()
-}
-
-// AlterColumnUsing is a function that returns an ALTER COLUMN USING query
-func (q *Query) AlterColumnUsing(table string, column string, expression string) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ALTER COLUMN "...)
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " USING "...)
-	q.query = append(q.query, expression...)
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// AlterColumnAddGeneratedIdentity is a function that returns an ALTER COLUMN ADD GENERATED AS IDENTITY query
-func AlterColumnAddGeneratedIdentity(table string, column string, generated string) string {
-	return getQuery().AlterColumnAddGeneratedIdentity(table, column, generated).String()
-}
-
-// AlterColumnAddGeneratedIdentity is a function that returns an ALTER COLUMN ADD GENERATED AS IDENTITY query
-func (q *Query) AlterColumnAddGeneratedIdentity(table string, column string, generated string) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ALTER COLUMN "...)
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " ADD GENERATED "...)
-	q.query = append(q.query, generated...)
-	q.query = append(q.query, " AS IDENTITY; "...)
-	return q
-}
-
-// AlterColumnSetGenerated is a function that returns an ALTER COLUMN SET GENERATED query
-func AlterColumnSetGenerated(table string, column string, generated string) string {
-	return getQuery().AlterColumnSetGenerated(table, column, generated).String()
-}
-
-// AlterColumnSetGenerated is a function that returns an ALTER COLUMN SET GENERATED query
-func (q *Query) AlterColumnSetGenerated(table string, column string, generated string) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ALTER COLUMN "...)
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " SET GENERATED "...)
-	q.query = append(q.query, generated...)
-	q.query = append(q.query, "; "...)
-	return q
-}
-
-// AlterColumnAddIdentity is a function that returns an ALTER COLUMN ADD IDENTITY query
-func AlterColumnDropIdentity(table string, column string) string {
-	return getQuery().AlterColumnDropIdentity(table, column).String()
-}
-
-// AlterColumnDropIdentity is a function that returns an ALTER COLUMN DROP IDENTITY query
-func (q *Query) AlterColumnDropIdentity(table string, column string) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ALTER COLUMN "...)
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " DROP IDENTITY IF EXISTS; "...)
+	if column.Unique {
+		q.query = append(q.query, " UNIQUE"...)
+	}
+	if column.NotNull {
+		q.query = append(q.query, " NOT NULL"...)
+	}
+	if column.Check != "" {
+		q.query = append(q.query, " CHECK ("...)
+		q.query = append(q.query, column.Check...)
+		q.query = append(q.query, ")"...)
+	}
+	if column.Default != "" {
+		q.query = append(q.query, " DEFAULT "...)
+		q.query = append(q.query, column.Default...)
+	}
+	if column.Collate != "" {
+		q.query = append(q.query, " COLLATE "...)
+		q.query = append(q.query, column.Collate...)
+	}
+	if column.References != "" {
+		q.query = append(q.query, " REFERENCES "...)
+		q.query = append(q.query, column.References...)
+		if column.OnUpdate != "" {
+			q.query = append(q.query, " ON UPDATE "...)
+			q.query = append(q.query, column.OnUpdate...)
+		}
+		if column.OnDelete != "" {
+			q.query = append(q.query, " ON DELETE "...)
+			q.query = append(q.query, column.OnDelete...)
+		}
+	}
+	if len(options) > 0 {
+		q.query = append(q.query, " "...)
+		q.query = append(q.query, strings.Join(options, " ")...)
+	}
+	q.query = append(q.query, ";"...)
 	return q
 }
 
 // DropColumn is a function that returns a DROP COLUMN query
-func DropColumn(table string, column string, cascade bool) string {
-	return getQuery().DropColumn(table, column, cascade).String()
-}
-
-// DropColumn builds the query string for an ALTER TABLE DROP COLUMN statement
-func (q *Query) DropColumn(table string, column string, cascade bool) *Query {
-	q.query = append(q.query, "ALTER TABLE "...)
-	q.query = append(q.query, table...)
+func (q *Query) DropColumn(columnName string) *Query {
 	q.query = append(q.query, " DROP COLUMN "...)
-	q.query = append(q.query, column...)
-	if cascade {
-		q.query = append(q.query, " CASCADE"...)
-	}
-	q.query = append(q.query, "; "...)
+	q.query = append(q.query, columnName...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
-// InsertInto is a function to start building an INSERT INTO query statement
-func InsertInto(table string, fields ...string) *Query {
-	return getQuery().InsertInto(table, fields...)
+// CreateIndex is a function that returns a CREATE INDEX query for the specified index and columns
+func CreateIndex(indexName, tableName string, columns []string, unique bool) *Query {
+	return getQuery().CreateIndex(indexName, tableName, columns, unique)
 }
 
-// InsertInto builds the query string for an INSERT INTO statement
-func (q *Query) InsertInto(table string, fields ...string) *Query {
-	q.query = append(q.query, "INSERT INTO "...)
-	q.query = append(q.query, table...)
-	q.query = append(q.query, " ("...)
-	for i, f := range fields {
-		if i > 0 {
-			q.query = append(q.query, ", "...)
-		}
-		q.query = append(q.query, f...)
+// CreateIndex is a function that returns a CREATE INDEX query for the specified index and columns
+func (q *Query) CreateIndex(indexName, tableName string, columns []string, unique bool) *Query {
+	q.query = append(q.query, "CREATE "...)
+	if unique {
+		q.query = append(q.query, "UNIQUE "...)
 	}
-	q.query = append(q.query, ')')
+	q.query = append(q.query, "INDEX "...)
+	q.query = append(q.query, indexName...)
+	q.query = append(q.query, " ON "...)
+	q.query = append(q.query, tableName...)
+	q.query = append(q.query, " ("...)
+	q.query = append(q.query, strings.Join(columns, ", ")...)
+	q.query = append(q.query, ");"...)
 	return q
 }
 
-// Values builds the query string for the VALUES clause in an INSERT INTO statement
-func (q *Query) Values(values ...any) *Query {
-	if !bytes.Contains(q.query, []byte(" VALUES")) {
-		q.query = append(q.query, " VALUES"...)
-	}
-	q.query = append(q.query, " ("...)
-	for i := range values {
-		if i > 0 {
-			q.query = append(q.query, ", "...)
-		}
-		q.query = append(q.query, '?')
-	}
-	q.query = append(q.query, ')')
-	q.args = append(q.args, values...)
+// DropIndex is a function that returns a DROP INDEX query for the specified index
+func DropIndex(indexName string) *Query {
+	return getQuery().DropIndex(indexName)
+}
+
+// DropIndex is a function that returns a DROP INDEX query for the specified index
+func (q *Query) DropIndex(indexName string) *Query {
+	q.query = append(q.query, "DROP INDEX "...)
+	q.query = append(q.query, indexName...)
+	q.query = append(q.query, ";"...)
+	return q
+}
+
+// CreateView is a function that returns a CREATE VIEW query for the specified view and SQL statement
+func CreateView(viewName, selectQuery string) *Query {
+	return getQuery().CreateView(viewName, selectQuery)
+}
+
+// CreateView is a function that returns a CREATE VIEW query for the specified view and SQL statement
+func (q *Query) CreateView(viewName, selectQuery string) *Query {
+	q.query = append(q.query, "CREATE VIEW "...)
+	q.query = append(q.query, viewName...)
+	q.query = append(q.query, " AS "...)
+	q.query = append(q.query, selectQuery...)
+	q.query = append(q.query, ";"...)
+	return q
+}
+
+// DropView is a function that returns a DROP VIEW query for the specified view
+func DropView(viewName string) *Query {
+	return getQuery().DropView(viewName)
+}
+
+// DropView is a function that returns a DROP VIEW query for the specified view
+func (q *Query) DropView(viewName string) *Query {
+	q.query = append(q.query, "DROP VIEW "...)
+	q.query = append(q.query, viewName...)
+	q.query = append(q.query, ";"...)
+	return q
+}
+
+// CreateTrigger is a function that returns a CREATE TRIGGER query for the specified trigger
+func CreateTrigger(triggerName, tableName, when, event, actions string) *Query {
+	return getQuery().CreateTrigger(triggerName, tableName, when, event, actions)
+}
+
+// CreateTrigger is a function that returns a CREATE TRIGGER query for the specified trigger
+func (q *Query) CreateTrigger(triggerName, tableName, when, event, actions string) *Query {
+	q.query = append(q.query, "CREATE TRIGGER "...)
+	q.query = append(q.query, triggerName...)
+	q.query = append(q.query, " "...)
+	q.query = append(q.query, when...)
+	q.query = append(q.query, " "...)
+	q.query = append(q.query, event...)
+	q.query = append(q.query, " ON "...)
+	q.query = append(q.query, tableName...)
+	q.query = append(q.query, " "...)
+	q.query = append(q.query, actions...)
+	q.query = append(q.query, ";"...)
+	return q
+}
+
+// DropTrigger is a function that returns a DROP TRIGGER query for the specified trigger
+func DropTrigger(triggerName string) *Query {
+	return getQuery().DropTrigger(triggerName)
+}
+
+// DropTrigger is a function that returns a DROP TRIGGER query for the specified trigger
+func (q *Query) DropTrigger(triggerName string) *Query {
+	q.query = append(q.query, "DROP TRIGGER "...)
+	q.query = append(q.query, triggerName...)
+	q.query = append(q.query, ";"...)
 	return q
 }
 
@@ -497,21 +442,96 @@ func (q *Query) DeleteFrom(table string) *Query {
 	return q
 }
 
-// Update is a function to start building an UPDATE query statement
-func Update(table string) *Query {
-	return getQuery().Update(table)
+// InsertInto is a function to start building an INSERT INTO query statement
+func InsertInto(table string) *Query {
+	return getQuery().InsertInto(table)
 }
 
-// Update builds the query string for an UPDATE statement
-func (q *Query) Update(table string) *Query {
-	q.query = append(q.query, "UPDATE "...)
+// InsertInto builds the query string for an INSERT INTO statement
+func (q *Query) InsertInto(table string) *Query {
+	q.query = append(q.query, "INSERT INTO "...)
 	q.query = append(q.query, table...)
-	q.query = append(q.query, " SET "...)
 	return q
 }
 
-// Set builds the query string for the SET clause in an UPDATE statement
+// Columns builds the query string for the COLUMNS clause in an INSERT INTO statement
+func (q *Query) Columns(columns ...string) *Query {
+	q.query = append(q.query, " ("...)
+	for i, column := range columns {
+		if i > 0 {
+			q.query = append(q.query, ", "...)
+		}
+		q.query = append(q.query, column...)
+	}
+	q.query = append(q.query, ')')
+	return q
+}
+
+// Values builds the query string for the VALUES clause in an INSERT INTO statement
+func (q *Query) Values(values ...any) *Query {
+	q.query = append(q.query, " VALUES"...)
+	q.query = append(q.query, " ("...)
+	for i := range values {
+		if i > 0 {
+			q.query = append(q.query, ", "...)
+		}
+		q.query = append(q.query, '?')
+	}
+	q.query = append(q.query, ')')
+	q.args = append(q.args, values...)
+	return q
+}
+
+// OnConflict builds the query string for the ON CONFLICT clause in an INSERT INTO statement
+func (q *Query) OnConflict(columns ...string) *Query {
+	q.query = append(q.query, " ON CONFLICT ("...)
+	for i, column := range columns {
+		if i > 0 {
+			q.query = append(q.query, ", "...)
+		}
+		q.query = append(q.query, column...)
+	}
+	q.query = append(q.query, ')')
+	return q
+}
+
+// Do is a function to start building a DO query statement
+func (q *Query) Do() *Query {
+	q.query = append(q.query, " DO "...)
+	return q
+}
+
+// Nothing is a function that returns a NOTHING clause for the specified fields
+func (q *Query) Nothing() *Query {
+	q.query = append(q.query, "NOTHING"...)
+	return q
+}
+
+// Update is a function to start building an UPDATE query statement
+func Update(table, condition string) *Query {
+	return getQuery().Update(table, condition)
+}
+
+// Update is a function that returns an UPDATE query for the specified table and condition
+func (q *Query) Update(table, condition string) *Query {
+	q.query = append(q.query, "UPDATE "...)
+	q.query = append(q.query, table...)
+	if condition != "" {
+		q.query = append(q.query, " OR "...)
+		q.query = append(q.query, condition...)
+	}
+	return q
+}
+
+// Field is a struct that represents a field in a table
+type Field struct {
+	Name  string
+	Value any
+}
+
+// Set is a function that returns a SET clause for the specified fields
 func (q *Query) Set(fields []*Field) *Query {
+	q.query = append(q.query, " SET "...)
 	for i, field := range fields {
 		q.query = append(q.query, field.Name...)
 		q.query = append(q.query, " = ?"...)
@@ -524,188 +544,146 @@ func (q *Query) Set(fields []*Field) *Query {
 }
 
 // Select is a function to start building a SELECT query statement
-func Select(exprs ...string) *Query {
-	return getQuery().Select(exprs...)
+func Select(conditions ...string) *Query {
+	return getQuery().Select(conditions...)
 }
 
-// Select builds the query string for the SELECT clause
-func (q *Query) Select(exprs ...string) *Query {
+// Select is a function that returns a SELECT query for the specified columns and tables, with optional conditions
+func (q *Query) Select(conditions ...string) *Query {
 	q.query = append(q.query, "SELECT "...)
-	for i, expr := range exprs {
+	for i, condition := range conditions {
 		if i > 0 {
 			q.query = append(q.query, ", "...)
 		}
-		q.query = append(q.query, expr...)
+		q.query = append(q.query, condition...)
 	}
 	return q
 }
 
-// From builds the query string for the FROM clause
-func (q *Query) From(table string) *Query {
+// From is a function that returns a FROM clause for the specified tables
+func (q *Query) From(tables ...string) *Query {
 	q.query = append(q.query, " FROM "...)
-	q.query = append(q.query, table...)
-	return q
-}
-
-// With is a function to start building a WITH query statement
-func With(name string, query *Query) *Query {
-	return getQuery().With(name, query)
-}
-
-// With builds the query string for the WITH clause
-func (q *Query) With(name string, query *Query) *Query {
-	q.query = append(q.query, "WITH "...)
-	q.query = append(q.query, name...)
-	q.query = append(q.query, " AS ("...)
-	q.query = append(q.query, query.query...)
-	q.query = append(q.query, ") "...)
-	q.args = append(q.args, query.args...)
-	return q
-}
-
-// Where builds the query string for the WHERE clause
-func (q *Query) Where(expr string, value any) *Query {
-	if !bytes.Contains(q.query, []byte("WHERE")) {
-		q.query = append(q.query, " WHERE "...)
+	for i, table := range tables {
+		if i > 0 {
+			q.query = append(q.query, ", "...)
+		}
+		q.query = append(q.query, table...)
 	}
+	return q
+}
+
+// Where is a function that returns a WHERE clause for the specified expression and value
+func (q *Query) Where(expr string, value any) *Query {
+	q.query = append(q.query, " WHERE "...)
 	q.query = append(q.query, expr...)
 	q.args = append(q.args, value)
 	return q
 }
 
-// And builds the query string for the AND clause
-func (q *Query) And() *Query {
-	q.query = append(q.query, " AND "...)
-	return q
-}
-
-// Or builds the query string for the OR clause
-func (q *Query) Or() *Query {
-	q.query = append(q.query, " OR "...)
-	return q
-}
-
-// In builds the query string for the IN clause
-func (q *Query) In(column string, values any) *Query {
-	if !bytes.Contains(q.query, []byte(" WHERE")) {
-		q.query = append(q.query, " WHERE "...)
-	}
-	q.query = append(q.query, column...)
-	q.query = append(q.query, " IN ("...)
-	switch v := values.(type) {
-	case []int:
-		for idx, value := range v {
-			q.query = append(q.query, '?')
-			if len(v) > 0 && idx < len(v)-1 {
-				q.query = append(q.query, ", "...)
-			}
-			q.args = append(q.args, value)
-		}
-	case []string:
-		for idx, value := range v {
-			q.query = append(q.query, '?')
-			if len(v) > 0 && idx < len(v)-1 {
-				q.query = append(q.query, ", "...)
-			}
-			q.args = append(q.args, value)
-		}
-	default:
-		for idx, value := range v.([]any) {
-			q.query = append(q.query, '?')
-			if len(v.([]any)) > 0 && idx < len(v.([]any))-1 {
-				q.query = append(q.query, ", "...)
-			}
-			q.args = append(q.args, value)
-		}
-	}
-	q.query = append(q.query, ')')
-	return q
-}
-
-// Join builds the query string for the JOIN clause
-func (q *Query) Join(table string, onConditions string) *Query {
+// Join is a function that returns a JOIN clause for the specified tables
+func (q *Query) Join(table, condition string) *Query {
 	q.query = append(q.query, " JOIN "...)
 	q.query = append(q.query, table...)
 	q.query = append(q.query, " ON "...)
-	q.query = append(q.query, onConditions...)
+	q.query = append(q.query, condition...)
 	return q
 }
 
-// LeftJoin builds the query string for the LEFT JOIN clause
-func (q *Query) LeftJoin(table string, onConditions string) *Query {
+// LeftJoin is a function that returns a LEFT JOIN clause for the specified tables
+func (q *Query) LeftJoin(table, condition string) *Query {
 	q.query = append(q.query, " LEFT JOIN "...)
 	q.query = append(q.query, table...)
 	q.query = append(q.query, " ON "...)
-	q.query = append(q.query, onConditions...)
+	q.query = append(q.query, condition...)
 	return q
 }
 
-// RightJoin builds the query string for the RIGHT JOIN clause
-func (q *Query) RightJoin(table string, onConditions string) *Query {
+// RightJoin is a function that returns a RIGHT JOIN clause for the specified tables
+func (q *Query) RightJoin(table, condition string) *Query {
 	q.query = append(q.query, " RIGHT JOIN "...)
 	q.query = append(q.query, table...)
 	q.query = append(q.query, " ON "...)
-	q.query = append(q.query, onConditions...)
+	q.query = append(q.query, condition...)
 	return q
 }
 
-// FullJoin builds the query string for the FULL JOIN clause
-func (q *Query) FullJoin(table string, onConditions string) *Query {
+// FullJoin is a function that returns a FULL JOIN clause for the specified tables
+func (q *Query) FullJoin(table, condition string) *Query {
 	q.query = append(q.query, " FULL JOIN "...)
 	q.query = append(q.query, table...)
 	q.query = append(q.query, " ON "...)
-	q.query = append(q.query, onConditions...)
+	q.query = append(q.query, condition...)
 	return q
 }
 
-// OrderBy builds the query string for the ORDER BY clause
-func (q *Query) OrderBy(exprs ...string) *Query {
-	q.query = append(q.query, " ORDER BY "...)
-	for i, expr := range exprs {
-		if i > 0 {
-			q.query = append(q.query, ", "...)
-		}
-		q.query = append(q.query, expr...)
-	}
-	return q
-}
-
-// GroupBy builds the query string for the GROUP BY clause
-func (q *Query) GroupBy(exprs ...string) *Query {
-	q.query = append(q.query, " GROUP BY "...)
-	for i, expr := range exprs {
-		if i > 0 {
-			q.query = append(q.query, ", "...)
-		}
-		q.query = append(q.query, expr...)
-	}
-	return q
-}
-
-// Having builds the query string for the HAVING clause
-func (q *Query) Having(expr string, value any) *Query {
+// Having is a function that adds a HAVING clause to the query for the specified conditions
+func (q *Query) Having(condition string, value any) *Query {
 	q.query = append(q.query, " HAVING "...)
-	q.query = append(q.query, expr...)
+	q.query = append(q.query, condition...)
 	q.args = append(q.args, value)
 	return q
 }
 
-// Limit builds the query string for the LIMIT clause
-func (q *Query) Limit(n int) *Query {
+// GroupBy is a function that returns a GROUP BY clause for the specified columns
+func (q *Query) GroupBy(conditions ...string) *Query {
+	q.query = append(q.query, " GROUP BY "...)
+	for i, condition := range conditions {
+		if i > 0 {
+			q.query = append(q.query, ", "...)
+		}
+		q.query = append(q.query, condition...)
+	}
+	return q
+}
+
+// OrderBy is a function that returns an ORDER BY clause for the specified columns and sort order
+func (q *Query) OrderBy(columns ...string) *Query {
+	q.query = append(q.query, " ORDER BY "...)
+	for i, column := range columns {
+		if i > 0 {
+			q.query = append(q.query, ", "...)
+		}
+		q.query = append(q.query, column...)
+	}
+	return q
+}
+
+// IndexBy is a function that returns an INDEX BY clause for the specified index
+func (q *Query) IndexBy(indexName string) *Query {
+	q.query = append(q.query, " INDEX BY "...)
+	q.query = append(q.query, indexName...)
+	return q
+}
+
+// NotIndex is a function that returns a NOT INDEX clause
+func (q *Query) NotIndex() *Query {
+	q.query = append(q.query, " NOT INDEX"...)
+	return q
+}
+
+// Reindex is a function that returns a REINDEX clause
+func (q *Query) Reindex(indexName string) *Query {
+	q.query = append(q.query, " REINDEX "...)
+	q.query = append(q.query, indexName...)
+	return q
+}
+
+// Limit is a function that specifies the maximum number of rows to return
+func (q *Query) Limit(limit int) *Query {
 	q.query = append(q.query, " LIMIT ?"...)
-	q.args = append(q.args, n)
+	q.args = append(q.args, limit)
 	return q
 }
 
-// Offset builds the query string for the OFFSET clause
-func (q *Query) Offset(n int) *Query {
+// Offset is a function that specifies the number of rows to skip before starting to return rows
+func (q *Query) Offset(offset int) *Query {
 	q.query = append(q.query, " OFFSET ?"...)
-	q.args = append(q.args, n)
+	q.args = append(q.args, offset)
 	return q
 }
 
-// Paginate adds a LIMIT and OFFSET clause to the query string to paginate results
-func (q *Query) Paginate(page int, pageSize int) *Query {
+// Paginate is a function that returns a LIMIT and OFFSET clause for the specified page and page size
+func (q *Query) Paginate(page, pageSize int) *Query {
 	if page < 1 {
 		page = 1
 	}
@@ -719,7 +697,7 @@ func (q *Query) Paginate(page int, pageSize int) *Query {
 	return q
 }
 
-// Returning builds the query string for the RETURNING clause
+// Returning is a function that returns a RETURNING clause for the specified columns
 func (q *Query) Returning(columns ...string) *Query {
 	q.query = append(q.query, " RETURNING "...)
 	for i, c := range columns {
@@ -731,30 +709,116 @@ func (q *Query) Returning(columns ...string) *Query {
 	return q
 }
 
-// Union builds the query string for the UNION clause
-func (q *Query) Union(other *Query) *Query {
-	q.query = append(q.query, " UNION "...)
-	q.query = append(q.query, other.query...)
-	q.args = append(q.args, other.args...)
+// With is a function that returns a WITH clause for the specified name and query
+func With(name string, query *Query) *Query {
+	return getQuery().With(name, query)
+}
+
+// With is a function that returns a WITH clause for the specified name and query
+func (q *Query) With(name string, query *Query) *Query {
+	q.query = append(q.query, "WITH "...)
+	q.query = append(q.query, name...)
+	q.query = append(q.query, " AS ("...)
+	q.query = append(q.query, query.query...)
+	q.query = append(q.query, ") "...)
+	q.args = append(q.args, query.args...)
 	return q
 }
 
-// Raw adds a raw query string to the query
+// And is a function that returns an AND WHERE clause for the specified expression and value
+func (q *Query) And(query *Query) *Query {
+	q.query = append(q.query, " AND "...)
+	q.query = append(q.query, query.query...)
+	q.args = append(q.args, query.args...)
+	return q
+}
+
+// Or is a function that returns an OR WHERE clause for the specified expression and value
+func (q *Query) Or(query *Query) *Query {
+	q.query = append(q.query, " OR "...)
+	q.query = append(q.query, query.query...)
+	q.args = append(q.args, query.args...)
+	return q
+}
+
+// Not is a function that returns a NOT WHERE clause for the specified expression and value
+func (q *Query) Not(query *Query) *Query {
+	q.query = append(q.query, " NOT "...)
+	q.query = append(q.query, query.query...)
+	q.args = append(q.args, query.args...)
+	return q
+}
+
+// Like is a function that returns a LIKE WHERE clause for the specified column and value
+func (q *Query) Like(column string, value any) *Query {
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " LIKE ?"...)
+	q.args = append(q.args, value)
+	return q
+}
+
+// In is a function that returns an IN WHERE clause for the specified column and values
+func (q *Query) In(column string, values ...any) *Query {
+	q.query = append(q.query, column...)
+	q.query = append(q.query, " IN ("...)
+	for i, value := range values {
+		if i > 0 {
+			q.query = append(q.query, ", "...)
+		}
+		q.query = append(q.query, '?')
+		q.args = append(q.args, value)
+	}
+	q.query = append(q.query, ')')
+	return q
+}
+
+// Asc is a function that specifies ascending sort order for the most recently specified column in the ORDER BY clause
+func (q *Query) Asc() *Query {
+	q.query = append(q.query, " ASC"...)
+	return q
+}
+
+// Desc is a function that specifies descending sort order for the most recently specified column in the ORDER BY clause
+func (q *Query) Desc() *Query {
+	q.query = append(q.query, " DESC"...)
+	return q
+}
+
+// Vacuum is a function that returns a VACUUM statement for the specified schema and file
+func Vacuum(schemaName, fileName string) *Query {
+	return getQuery().Vacuum(schemaName, fileName)
+}
+
+// Vacuum is a function that returns a VACUUM statement for the specified schema and file
+func (q *Query) Vacuum(schemaName, fileName string) *Query {
+	q.query = append(q.query, "VACUUM"...)
+	if schemaName != "" {
+		q.query = append(q.query, " "...)
+		q.query = append(q.query, schemaName...)
+	}
+	if fileName != "" {
+		q.query = append(q.query, " INTO "...)
+		q.query = append(q.query, fileName...)
+	}
+	q.query = append(q.query, ";"...)
+	return q
+}
+
+// Raw is a function that returns a raw query string and arguments
 func (q *Query) Raw(query string, args ...any) *Query {
 	q.query = append(q.query, query...)
 	q.args = append(q.args, args...)
 	return q
 }
 
-// String returns the built query string and resets the query
-// This is a convenience method for when you don't need the arguments
-func (q *Query) String() string {
+// Query is a function that returns the query string
+func (q *Query) Query() string {
 	query := string(q.query)
 	q.Reset()
 	return query
 }
 
-// Build builds the query string and returns the query string and arguments
+// Build is a function that returns the query string and arguments
 func (q *Query) Build() (string, []any) {
 	query := string(q.query)
 	args := q.args
@@ -763,30 +827,7 @@ func (q *Query) Build() (string, []any) {
 	return query, args
 }
 
-// BuildPostgres builds the query string for PostgreSQL and returns the query string and arguments
-func (q *Query) BuildPostgres() (string, []any) {
-	replacementIndex := 1
-	for i := 0; i < len(q.query); i++ {
-		if q.query[i] == '?' {
-			q.query[i] = '$'
-			replacementIndexStr := strconv.Itoa(replacementIndex)
-			for j := 0; j < len(replacementIndexStr); j++ {
-				q.query = append(q.query, 0)
-				copy(q.query[i+j+1:], q.query[i+j:])
-				q.query[i+j+1] = replacementIndexStr[j]
-			}
-			replacementIndex++
-		}
-	}
-
-	query := string(q.query)
-	args := q.args
-
-	q.Reset()
-	return query, args
-}
-
-// Reset resets the Query struct for reuse
+// Reset is a function that resets the query string and arguments
 func (q *Query) Reset() {
 	q.query = q.query[:0]
 	q.args = q.args[:0]
