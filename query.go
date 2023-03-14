@@ -106,15 +106,15 @@ func (q *Query) ReleaseSavepoint(name string) *Query {
 }
 
 // AttachDatabase is a function that returns an ATTACH DATABASE query
-func AttachDatabase(databaseName, alias string) *Query {
-	return getQuery().AttachDatabase(databaseName, alias)
+func AttachDatabase(database, alias string) *Query {
+	return getQuery().AttachDatabase(database, alias)
 }
 
 // AttachDatabase is a function that returns an ATTACH DATABASE query
-func (q *Query) AttachDatabase(databaseName, alias string) *Query {
+func (q *Query) AttachDatabase(database, alias string) *Query {
 	q.query = append(q.query, "ATTACH DATABASE "...)
 	q.query = append(q.query, "'"...)
-	q.query = append(q.query, databaseName...)
+	q.query = append(q.query, database...)
 	q.query = append(q.query, "'"...)
 	q.query = append(q.query, " AS "...)
 	q.query = append(q.query, alias...)
